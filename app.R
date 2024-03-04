@@ -12,29 +12,54 @@
 library(shiny)
 
 ui <- fluidPage(
-  selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
-  verbatimTextOutput("summary"),
-  tableOutput("table")
+  theme = bslib::bs_theme(bootswatch = "sandstone"),
+  titlePanel( "ADA Bayern Stichprobenziehung"
+    # app title/description
+  ),
+  p("Beschreibung..."),
+  tabsetPanel(
+    tabPanel("Informationen zur Stichprobe", 
+             fileInput("file", "Daten", buttonLabel = "Hochladen"),
+             textInput("delim", "Delimiter (leave blank to guess)", ""),
+             numericInput("skip", "Rows to skip", 0, min = 0),
+             numericInput("rows", "Rows to preview", 10, min = 1)
+    ),
+    tabPanel("Daten kennenlernen"),
+    tabPanel("Stichprobe festlegen"),
+    tabPanel("Stichprobe einsehen")
+  )
 )
-
-
 server <- function(input, output, session) {
-  # Create a reactive expression
-  dataset <- reactive({
-    get(input$dataset, "package:datasets")
-  })
-  
-  output$summary <- renderPrint({
-    # Use a reactive expression by calling it like a function
-    summary(dataset())
-  })
-  
-  output$table <- renderTable({
-    dataset()
+  output$panel <- renderText({
+    paste("Current panel: ", input$tabset)
   })
 }
 
 shinyApp(ui, server)
+
+# ui <- fluidPage(
+#   selectInput("dataset", label = "Dataset", choices = ls("package:datasets")),
+#   verbatimTextOutput("summary"),
+#   tableOutput("table")
+# )
+# 
+# 
+# server <- function(input, output, session) {
+#   # Create a reactive expression
+#   dataset <- reactive({
+#     get(input$dataset, "package:datasets")
+#   })
+#   
+#   output$summary <- renderPrint({
+#     # Use a reactive expression by calling it like a function
+#     summary(dataset())
+#   })
+#   
+#   output$table <- renderTable({
+#     dataset()
+#   })
+# }
+
 
 #Examples 
 
