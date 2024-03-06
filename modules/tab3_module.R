@@ -137,8 +137,7 @@ tab3server <- function(id, data) {
           output$strata_rename_input_ui <- renderUI({
             ns <- session$ns
             selectInput(inputId = ns(input_id), "Schicht auswählen", 
-                        choices = colnames(dataset()),
-                        selected = selected_column())
+                        choices = colnames(dataset()))
           })
           observe({
             updateActionButton(session, layer_button_id, label=input[[input_id]])
