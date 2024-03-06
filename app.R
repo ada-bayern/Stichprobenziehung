@@ -10,12 +10,16 @@
 #source("R/Helpers.R")
 
 library(shiny)
+library(ggplot2)
+library(shinythemes)
+
 source("modules/tab1_module.R")
 source("modules/tab2_module.R")
 source("modules/tab3_module.R")
 
 ui <- fluidPage(
-  theme = bslib::bs_theme(bootswatch = "sandstone"),
+  #theme = shinythemes::shinytheme("cerulean"),
+  themeSelector(),
   titlePanel( "ADA Bayern Stichprobenziehung"
     # app title/description
   ),

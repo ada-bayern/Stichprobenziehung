@@ -3,10 +3,7 @@
 tab2ui <- function(id){
   ns <- NS(id)
   fluidPage(
-    fileInput(ns("file"), "Daten", buttonLabel = "Hochladen"),
-    textInput(ns("delim"), "Delimiter (leer lassen um zu raten)", ""),
-    numericInput(ns("skip"), "Spalten zu überspringen", 0, min = 0),
-    numericInput(ns("rows"), "Spalten anzeigen", 10, min = 1)
+    fileInput(ns("file"), "Daten", buttonLabel = "Hochladen")
     
   )
 }
