@@ -3,7 +3,12 @@
 tab2ui <- function(id){
   ns <- NS(id)
   fluidPage(
-    fileInput(ns("file"), "Daten", buttonLabel = "Hochladen")
+    fileInput(ns("file"), "Daten", buttonLabel = "Hochladen"),
+    br(),
+    actionButton(ns("show_text"), "Daten einsehen"),
+    tableOutput(ns("head")),
+    
+    plotOutput(ns("plot1"))
     
   )
 }
@@ -22,6 +27,16 @@ tab2server <- function(id) {
     output$file_info <- renderPrint({
       req(input$file)
       paste("Uploaded file:", input$file$name)
+    })
+    
+    observe({
+      req(input$show_text)
+      output$head <- renderTable({
+        head(uploaded_data())
+      })
+      output$plot1 <- renderPlot({
+        plot(uploaded_data()[,5])
+      })
     })
     
     # Return uploaded data

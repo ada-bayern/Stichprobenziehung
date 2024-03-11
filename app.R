@@ -17,6 +17,7 @@ source("modules/tab1_module.R")
 source("modules/tab2_module.R")
 source("modules/tab3_module.R")
 
+
 ui <- fluidPage(
   #theme = shinythemes::shinytheme("cerulean"),
   themeSelector(),
@@ -32,6 +33,8 @@ ui <- fluidPage(
   )
 )
 server <- function(input, output, session) {
+  options(shiny.maxRequestSize=160*1024^2)
+  
   output$panel <- renderText({
     paste("Current panel: ", input$tabset)
   })
