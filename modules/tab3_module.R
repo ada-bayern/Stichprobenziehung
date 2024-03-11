@@ -1,4 +1,5 @@
 
+source("modules/define_layer_module.R")
 # Define UI
 tab3ui <- function(id){
   ns <- NS(id)
@@ -9,11 +10,10 @@ tab3ui <- function(id){
     sidebarLayout(
       sidebarPanel(
         actionButton(ns("filter_dropdown"), "Filtern", icon = icon("filter")),
-        br(),
         uiOutput(ns("strat_layer_buttons_ui")),
         actionButton(ns("add_strat_layer_button"), "Schicht hinzufügen", 
                      icon = icon("plus")),
-        uiOutput(ns("strata_rename_input_ui")),
+        tabsetPanel(id = ns("strata_rename_input_ui"), type="hidden"),
         conditionalPanel(
           condition = "input.filter_dropdown % 2 != 0",
           ns = ns,
@@ -42,11 +42,17 @@ tab3server <- function(id, data) {
     selected_column <- reactiveVal(NULL)
     selected_values <- reactiveVal(NULL)
     
-    # Storing the buttons for stratification layersn, names of layers, and
+    # Storing the buttons for stratification layers, names of layers, and
     # number of layers
-    strat_layer_buttons <- reactiveVal(NULL)
-    strat_layer_names <- reactiveVal(NULL)
-    strat_layer_counter <- reactiveVal(0)
+    #strat_layer_buttons <- reactiveVal(NULL)
+    strat_layer_ids <- reactiveValues(ids = list())
+    #strat_layer_counter <- reactiveVal(0)
+    
+    # tabPanels of the ui for defining a layer
+    #def_layer_ui_tabs <- reactiveVal(NULL)
+    
+    # list of module outputs
+    module_outputs <- reactiveValues()
                  
     # When the filter button is clicked, show a dropwdown menu with which the 
     # user can select by which column to filter.
@@ -103,53 +109,45 @@ tab3server <- function(id, data) {
     
     # Adding a new stratification layer
     observeEvent(input$add_strat_layer_button, {
-      counter <- strat_layer_counter() + 1
-      strat_layer_counter(counter)
-      
-      # Creating a new button for new strata
+      # Create new UI for defining layer and adding it to list of tabs
       ns <- session$ns
-      new_layer_button <- actionButton(ns(paste0("strat_layer_button_", counter)), 
-                                       paste("Schicht", counter))
       
-      # Add the new strat layer button to the list of layer buttons
-      strat_buttons_list <- c(isolate(strat_layer_buttons()), list(new_layer_button))
-      strat_layer_buttons(strat_buttons_list)
+      layer_id <- paste0("layer_", length(strat_layer_ids$ids) + 1)
+      strat_layer_ids$ids[[layer_id]] <- layer_id
+      # Creates a new tab for the tabsetpanel. This tab containts the UI
+      # to define a stratification layer. The defined parameters are defined
+      # and saved. Inserts tab into tabsetpanel
+      # TODO: More parameters besides the column name
+      new_def_layer_ui <- tabPanel(ns(paste0("panel_def_", layer_id)),
+                                   define_layer_ui(ns(paste0("def_", layer_id)), 
+                                                   colnames(dataset())))
+      module_outputs[[layer_id]] = define_layer_server(paste0("def_", layer_id))
+      insertTab(inputId = "strata_rename_input_ui", new_def_layer_ui)
       
-      output$strat_layer_buttons_ui <- renderUI({
-        req(strat_layer_buttons())
-        strat_layer_buttons()
-      })
     })
     
     # Outputting strat layer buttons UI
-    
-    
-    # Event handler for strat layer button click
-    observe({
-      # Checking for a strata button being pushed
-      layer_names_list <- lapply(seq_along(strat_layer_buttons()), function(i) {
-        ns <- session$ns
-        layer_button_id <- paste0("strat_layer_button_", i)
-        input_id <- paste0("layer_name_input_", i)
-        req(input[[layer_button_id]])
-        if (input[[layer_button_id]] > 0) {
-          # Allows for chosing a row base a stratification layer on
-          output$strata_rename_input_ui <- renderUI({
-            ns <- session$ns
-            selectInput(inputId = ns(input_id), "Schicht auswählen", 
-                        choices = colnames(dataset()))
-          })
-          observe({
-            updateActionButton(session, layer_button_id, label=input[[input_id]])
-          })
-        } else {
-          NULL
-        }
+    output$strat_layer_buttons_ui <- renderUI({
+      ns <- session$ns
+      lapply(strat_layer_ids$ids, function(button_id) {
+        column_name <- module_outputs[[button_id]]()
+        print(column_name)
+        actionButton(inputId = ns(paste0("button_", button_id)), label = column_name)
       })
-      
-      strat_layer_names(unlist(strat_layer_names))
     })
     
-  })
-  
+    # Event handler for strat layer button click. Switches to the corresponding 
+    # tab in the hidden tabset
+    observeEvent(strat_layer_ids$ids, {
+      ns <- session$ns
+      lapply(strat_layer_ids$ids, function(layer_id){
+        button_id <- paste0("button_", layer_id)
+        observeEvent(input[[button_id]], {
+          column_name <- module_outputs[[layer_id]]()
+          updateTabsetPanel(inputId = "strata_rename_input_ui", selected = ns(paste0("panel_def_", layer_id)))
+          })
+        })
+      })
+    })
+     
 }
