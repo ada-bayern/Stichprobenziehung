@@ -12,6 +12,8 @@
 library(shiny)
 library(ggplot2)
 library(shinythemes)
+library(tidyverse)
+library(sf)
 
 source("modules/tab1_module.R")
 source("modules/tab2_module.R")
@@ -19,8 +21,8 @@ source("modules/tab3_module.R")
 
 
 ui <- fluidPage(
-  #theme = shinythemes::shinytheme("cerulean"),
-  themeSelector(),
+  theme = shinythemes::shinytheme("simplex"),
+  #themeSelector(),
   titlePanel( "ADA Bayern Stichprobenziehung"
     # app title/description
   ),
