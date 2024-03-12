@@ -1,5 +1,6 @@
 
 source("modules/define_layer_module.R")
+library(gtsummary)
 # Define UI
 tab3ui <- function(id){
   ns <- NS(id)
@@ -22,7 +23,9 @@ tab3ui <- function(id){
         )
       ),
       mainPanel(
-        tableOutput(ns("filtered_table"))
+        tableOutput(ns("filtered_table")),
+        uiOutput(ns("crosstab_columns")),
+        tableOutput(ns("crosstable"))
       )
     )
   )
@@ -42,14 +45,8 @@ tab3server <- function(id, data) {
     selected_column <- reactiveVal(NULL)
     selected_values <- reactiveVal(NULL)
     
-    # Storing the buttons for stratification layers, names of layers, and
-    # number of layers
-    #strat_layer_buttons <- reactiveVal(NULL)
+    # names of stratification layers
     strat_layer_ids <- reactiveValues(ids = list())
-    #strat_layer_counter <- reactiveVal(0)
-    
-    # tabPanels of the ui for defining a layer
-    #def_layer_ui_tabs <- reactiveVal(NULL)
     
     # list of module outputs
     module_outputs <- reactiveValues()
@@ -81,6 +78,7 @@ tab3server <- function(id, data) {
       } else {
         output$column_dropdown <- NULL
         output$value_dropdown <- NULL
+        output$filtered_table <- NULL
       }
     })
     
@@ -131,7 +129,6 @@ tab3server <- function(id, data) {
       ns <- session$ns
       lapply(strat_layer_ids$ids, function(button_id) {
         column_name <- module_outputs[[button_id]]()
-        print(column_name)
         actionButton(inputId = ns(paste0("button_", button_id)), label = column_name)
       })
     })
@@ -148,6 +145,29 @@ tab3server <- function(id, data) {
           })
         })
       })
+    
+    # Select columns for crosstabs
+    output$crosstab_columns <- renderUI({
+      req(input$strata_rename_input_ui)
+      ns <- session$ns
+      choices = c("Anzahl.Termine.Kat", "Dauer.des.Verfahrens.in.Tagen.Kat")
+      fluidRow(column(6, selectInput(ns("ct_column_one"), label = "1. Spalte auswählen", choices = choices)),
+               column(6, selectInput(ns("ct_column_two"), label = "2. Spalte auswählen", choices = choices))
+      )
+    })
+    
+    # Creating crosstable of chosen row. 
+    # TODO: actually base this on all rows for which there is a strat layer
+    output$crosstable <- renderTable({
+      req(input$ct_column_one, input$ct_column_two, dataset())
+      data <- dataset()
+      col_one <- data[[input$ct_column_one]]
+      col_two <- data[[input$ct_column_two]]
+      
+      ct <- table(col_one, col_two)
+      as.data.frame.matrix(ct)
+    }, rownames = T, striped = TRUE, bordered = TRUE)
+    
     })
      
 }
