@@ -18,6 +18,7 @@ library(sf)
 source("modules/tab1_module.R")
 source("modules/tab2_module.R")
 source("modules/tab3_module.R")
+source("modules/tab4_module.R")
 
 
 ui <- fluidPage(
@@ -30,7 +31,8 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel("Informationen zur Stichprobe", tab1ui("tab1")),
     tabPanel("Daten kennenlernen", tab2ui("tab2")),
-    tabPanel("Stichprobe festlegen", tab3ui("tab3")),
+    tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
+    tabPanel("Stichprobe festlegen", tab4ui("tab4")),
     tabPanel("Stichprobe einsehen")
   )
 )
@@ -42,7 +44,9 @@ server <- function(input, output, session) {
   })
   tab1server("tab1")
   uploaded_data <- tab2server("tab2")
-  tab3server("tab3", data = uploaded_data)
+  filtered_data <- tab3server("tab3", data = uploaded_data)
+  tab4server("tab4", data = filtered_data)
+  
 }
 
 shinyApp(ui, server)

@@ -1,6 +1,4 @@
 
-source("modules/define_layer_module.R")
-library(gtsummary)
 # Define UI
 tab3ui <- function(id){
   ns <- NS(id)
@@ -11,21 +9,16 @@ tab3ui <- function(id){
     sidebarLayout(
       sidebarPanel(
         actionButton(ns("filter_dropdown"), "Filtern", icon = icon("filter")),
-        uiOutput(ns("strat_layer_buttons_ui")),
-        actionButton(ns("add_strat_layer_button"), "Schicht hinzufügen", 
-                     icon = icon("plus")),
-        tabsetPanel(id = ns("strata_rename_input_ui"), type="hidden"),
         conditionalPanel(
           condition = "input.filter_dropdown % 2 != 0",
           ns = ns,
           uiOutput(ns("column_dropdown")),
-          uiOutput(ns("value_dropdown")),
+          uiOutput(ns("value_dropdown"))
         )
       ),
       mainPanel(
+        textOutput(ns("pop_count")),
         tableOutput(ns("filtered_table")),
-        uiOutput(ns("crosstab_columns")),
-        tableOutput(ns("crosstable"))
       )
     )
   )
@@ -44,12 +37,6 @@ tab3server <- function(id, data) {
     # Defining the column and the column values by which to filter
     selected_column <- reactiveVal(NULL)
     selected_values <- reactiveVal(NULL)
-    
-    # names of stratification layers
-    strat_layer_ids <- reactiveValues(ids = list())
-    
-    # list of module outputs
-    module_outputs <- reactiveValues()
                  
     # When the filter button is clicked, show a dropwdown menu with which the 
     # user can select by which column to filter.
@@ -78,14 +65,23 @@ tab3server <- function(id, data) {
       } else {
         output$column_dropdown <- NULL
         output$value_dropdown <- NULL
-        output$filtered_table <- NULL
       }
     })
     
-    # Displays the filtered data
+    # filters the population
     filtered_data <- reactive({
       req(input$value_select)
       subset(dataset(), dataset()[[input$column_select]] %in% input$value_select)
+    })
+    
+    # displays number of rows in filtered data
+    output$pop_count <- renderText({
+      paste("Zeilen:", nrow(filtered_data()))
+    })
+    
+    # Showing the filtered table
+    output$filtered_table <- renderTable({
+      head(filtered_data(), 100)
     })
     
     # Saves the columns and values selecting in filtering so they are displayed 
@@ -100,74 +96,8 @@ tab3server <- function(id, data) {
       }
     })
     
-    # Showing the filtered table
-    output$filtered_table <- renderTable({
-      filtered_data()
-    })
+    # return filtered data
+    return(filtered_data)
     
-    # Adding a new stratification layer
-    observeEvent(input$add_strat_layer_button, {
-      # Create new UI for defining layer and adding it to list of tabs
-      ns <- session$ns
-      
-      layer_id <- paste0("layer_", length(strat_layer_ids$ids) + 1)
-      strat_layer_ids$ids[[layer_id]] <- layer_id
-      # Creates a new tab for the tabsetpanel. This tab containts the UI
-      # to define a stratification layer. The defined parameters are defined
-      # and saved. Inserts tab into tabsetpanel
-      # TODO: More parameters besides the column name
-      new_def_layer_ui <- tabPanel(ns(paste0("panel_def_", layer_id)),
-                                   define_layer_ui(ns(paste0("def_", layer_id)), 
-                                                   colnames(dataset())))
-      module_outputs[[layer_id]] = define_layer_server(paste0("def_", layer_id))
-      insertTab(inputId = "strata_rename_input_ui", new_def_layer_ui)
-      
-    })
-    
-    # Outputting strat layer buttons UI
-    output$strat_layer_buttons_ui <- renderUI({
-      ns <- session$ns
-      lapply(strat_layer_ids$ids, function(button_id) {
-        column_name <- module_outputs[[button_id]]()
-        actionButton(inputId = ns(paste0("button_", button_id)), label = column_name)
-      })
-    })
-    
-    # Event handler for strat layer button click. Switches to the corresponding 
-    # tab in the hidden tabset
-    observeEvent(strat_layer_ids$ids, {
-      ns <- session$ns
-      lapply(strat_layer_ids$ids, function(layer_id){
-        button_id <- paste0("button_", layer_id)
-        observeEvent(input[[button_id]], {
-          column_name <- module_outputs[[layer_id]]()
-          updateTabsetPanel(inputId = "strata_rename_input_ui", selected = ns(paste0("panel_def_", layer_id)))
-          })
-        })
-      })
-    
-    # Select columns for crosstabs
-    output$crosstab_columns <- renderUI({
-      req(input$strata_rename_input_ui)
-      ns <- session$ns
-      choices = c("Anzahl.Termine.Kat", "Dauer.des.Verfahrens.in.Tagen.Kat")
-      fluidRow(column(6, selectInput(ns("ct_column_one"), label = "1. Spalte auswählen", choices = choices)),
-               column(6, selectInput(ns("ct_column_two"), label = "2. Spalte auswählen", choices = choices))
-      )
-    })
-    
-    # Creating crosstable of chosen row. 
-    # TODO: actually base this on all rows for which there is a strat layer
-    output$crosstable <- renderTable({
-      req(input$ct_column_one, input$ct_column_two, dataset())
-      data <- dataset()
-      col_one <- data[[input$ct_column_one]]
-      col_two <- data[[input$ct_column_two]]
-      
-      ct <- table(col_one, col_two)
-      as.data.frame.matrix(ct)
-    }, rownames = T, striped = TRUE, bordered = TRUE)
-    
-    })
-     
+  })   
 }
