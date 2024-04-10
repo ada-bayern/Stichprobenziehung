@@ -147,6 +147,6 @@ tab2server <- function(id) {
     })
     
     # Return uploaded data
-    return(uploaded_data)
+    return(clean_akten)
   })
 }

@@ -21,7 +21,7 @@ source("modules/tab3_module.R")
 
 
 ui <- fluidPage(
-  theme = shinythemes::shinytheme("simplex"),
+  theme = shinythemes::shinytheme("flatly"),
   #themeSelector(),
   titlePanel( "ADA Bayern Stichprobenziehung"
     # app title/description
