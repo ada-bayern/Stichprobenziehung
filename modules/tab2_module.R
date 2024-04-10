@@ -49,6 +49,7 @@ tab2server <- function(id) {
                         `Gesamtstreitgegenstand`,
                         `Erledigungsgrund`,
                         `Dauer.des.Verfahrens.in.Tagen`,
+                        `Anzahl.Termine`,
                         `Archivstatus`,
                         `Anbietungsgrund..manuell.erfasst.`,
                         `Anbietungsgrund`)
