@@ -53,7 +53,8 @@ define_layer_server <- function(id) {
     })
     # Return name of selected column.
     # TODO: return all collected information which define categories
-    return(reactive({ input$column_select }))
+    #return(reactive({ input$column_select }))
+    return(selected_column)
   })
   
 }

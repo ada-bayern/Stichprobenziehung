@@ -1,5 +1,6 @@
 
 source("modules/define_layer_module.R")
+source("modules/selection_probability_module.R")
 library(gtsummary)
 # Define UI
 tab4ui <- function(id){
@@ -19,7 +20,13 @@ tab4ui <- function(id){
       ),
       mainPanel(
         uiOutput(ns("crosstab_columns")),
-        tableOutput(ns("crosstable"))
+        tableOutput(ns("crosstable")),
+        fluidRow(
+          # Text input for sample size
+          column(2, numericInput("sample_size", "Stichprobengröße", value = 100, min = 1, max = 99999, width = "80px")),
+          # Tabset for defining sampling probabilities
+          tabsetPanel(id = ns("define_selection_probs_ui"), type = "tabs")
+        )
       )
     )
   )
@@ -41,6 +48,9 @@ tab4server <- function(id, data) {
     # list of module outputs
     module_outputs <- reactiveValues()
     
+    # parameters for selection probability
+    sp_inputs <- reactiveValues()
+    
     # Adding a new stratification layer
     observeEvent(input$add_strat_layer_button, {
       # Create new UI for defining layer and adding it to list of tabs
@@ -57,6 +67,14 @@ tab4server <- function(id, data) {
                                                    colnames(dataset())))
       module_outputs[[layer_id]] = define_layer_server(paste0("def_", layer_id))
       insertTab(inputId = "strata_rename_input_ui", new_def_layer_ui)
+      # Also creating a tab for defining sampling probabilities
+      unique_values <- reactiveVal(unique(dataset()$Anzahl.Termine))
+      # tODO: create ui with name of layer at top
+      new_selection_prob_ui <- selection_probability_ui(ns(paste0("sp_", layer_id))) 
+      insertTab(inputId = "define_selection_probs_ui", new_selection_prob_ui)
+      ret <- selection_probability_server(paste0("sp_", layer_id), unique_values)
+      sp_inputs$kind[[layer_id]] = ret$kind
+      sp_inputs$vec[[layer_id]] = ret$vec
       
     })
     
@@ -102,7 +120,8 @@ tab4server <- function(id, data) {
       
       ct <- table(col_one, col_two)
       as.data.frame.matrix(ct)
-    }, rownames = T, striped = TRUE, bordered = TRUE)
+    }, rownames = T, striped = TRUE, bordered = TRUE
+    )
     
   })
   
