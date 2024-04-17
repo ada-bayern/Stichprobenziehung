@@ -25,12 +25,13 @@ tab4ui <- function(id){
           # Text input for sample size
           column(2, numericInput("sample_size", "Stichprobengröße", value = 100, min = 1, max = 99999, width = "80px")),
           # Tabset for defining sampling probabilities
-          tabsetPanel(id = ns("define_selection_probs_ui"), type = "tabs")
+          uiOutput(ns("define_selection_probs_ui"))
         )
       )
     )
   )
 }
+
 
 # Define server logic
 tab4server <- function(id, data) {
@@ -43,58 +44,81 @@ tab4server <- function(id, data) {
     })
     
     # names of stratification layers
-    strat_layer_ids <- reactiveValues(ids = list())
-    
-    # list of module outputs
-    module_outputs <- reactiveValues()
-    
-    # parameters for selection probability
-    sp_inputs <- reactiveValues()
+    strat_layers <- reactiveValues(ids = c(), columns = list(), 
+                                   categories = list(), sel_kind = list(), 
+                                   sel_params = list())
     
     # Adding a new stratification layer
     observeEvent(input$add_strat_layer_button, {
       # Create new UI for defining layer and adding it to list of tabs
       ns <- session$ns
       
-      layer_id <- paste0("layer_", length(strat_layer_ids$ids) + 1)
-      strat_layer_ids$ids[[layer_id]] <- layer_id
+      layer_id <- paste0("layer_", length(strat_layers$ids) + 1)
+      strat_layers$ids <- c(strat_layers$ids, layer_id)
+      
+      #column values which haven't been selected yet so no columns
+      # is selected for two stratification layers
+      sc_vec <- lapply(strat_layers$columns, function(column){
+        column()
+      })
+      unselected_cols <- setdiff(colnames(dataset()), sc_vec)
+      
       # Creates a new tab for the tabsetpanel. This tab containts the UI
       # to define a stratification layer. The defined parameters are defined
       # and saved. Inserts tab into tabsetpanel
       # TODO: More parameters besides the column name
       new_def_layer_ui <- tabPanel(ns(paste0("panel_def_", layer_id)),
                                    define_layer_ui(ns(paste0("def_", layer_id)), 
-                                                   colnames(dataset())))
-      module_outputs[[layer_id]] = define_layer_server(paste0("def_", layer_id))
+                                                   unselected_cols))
+      # TODO: also take the information defining the categories
+      strat_layers$columns[[layer_id]] <- define_layer_server(paste0("def_", layer_id))
       insertTab(inputId = "strata_rename_input_ui", new_def_layer_ui)
-      # Also creating a tab for defining sampling probabilities
-      unique_values <- reactiveVal(unique(dataset()$Anzahl.Termine))
-      # tODO: create ui with name of layer at top
-      new_selection_prob_ui <- selection_probability_ui(ns(paste0("sp_", layer_id))) 
-      insertTab(inputId = "define_selection_probs_ui", new_selection_prob_ui)
-      ret <- selection_probability_server(paste0("sp_", layer_id), unique_values)
-      sp_inputs$kind[[layer_id]] = ret$kind
-      sp_inputs$vec[[layer_id]] = ret$vec
-      
     })
+    
+    
+    # renders the tabs for the tabset panel in which the selection probabilities
+    # are defined
+    output$define_selection_probs_ui <- renderUI({
+      ns <- session$ns
+      tabs <-  lapply(strat_layers$ids, function(layer_id) {
+          col_name <- strat_layers$columns[[layer_id]]
+          tabPanel(title = col_name(), value = layer_id,
+                   selection_probability_ui(ns(paste0("sp_", layer_id)), col_name))
+        })
+      do.call(tabsetPanel, tabs)
+    })
+    
+    
+    # creating moduleservers for the selection probability logic and saving results
+    observeEvent(strat_layers$ids, {
+      ns <- session$ns
+      for (layer_id in strat_layers$ids){
+        unique_values <- reactiveVal(unique(dataset()$Anzahl.Termine))
+        ret <- selection_probability_server(paste0("sp_", layer_id), unique_values)
+        strat_layers$sel_kind[[layer_id]] = ret$kind
+        strat_layers$vec[[layer_id]] = ret$vec
+      }
+    })
+    
     
     # Outputting strat layer buttons UI
     output$strat_layer_buttons_ui <- renderUI({
       ns <- session$ns
-      lapply(strat_layer_ids$ids, function(button_id) {
-        column_name <- module_outputs[[button_id]]()
-        actionButton(inputId = ns(paste0("button_", button_id)), label = column_name)
+      lapply(strat_layers$ids, function(button_id) {
+        column_name <- strat_layers$columns[[button_id]]
+        actionButton(inputId = ns(paste0("button_", button_id)), label = column_name())
       })
     })
     
+    
     # Event handler for strat layer button click. Switches to the corresponding 
     # tab in the hidden tabset
-    observeEvent(strat_layer_ids$ids, {
+    observeEvent(strat_layers$ids, {
       ns <- session$ns
-      lapply(strat_layer_ids$ids, function(layer_id){
+      lapply(strat_layers$ids, function(layer_id){
         button_id <- paste0("button_", layer_id)
         observeEvent(input[[button_id]], {
-          column_name <- module_outputs[[layer_id]]()
+          #column_name <- strat_layers$columns[[layer_id]]#()
           updateTabsetPanel(inputId = "strata_rename_input_ui", selected = ns(paste0("panel_def_", layer_id)))
         })
       })
@@ -109,6 +133,7 @@ tab4server <- function(id, data) {
                column(6, selectInput(ns("ct_column_two"), label = "2. Spalte auswählen", choices = choices))
       )
     })
+    
     
     # Creating crosstable of chosen row. 
     # TODO: actually base this on all rows for which there is a strat layer

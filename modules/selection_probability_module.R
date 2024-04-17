@@ -1,7 +1,7 @@
 # Define the module
-selection_probability_ui <- function(id) {
+selection_probability_ui <- function(id, title) {
   ns <- NS(id)
-  tabPanel(id,
+  tabPanel(title(),
            selectInput(inputId = ns("sp_kind"),
                        "Art der Auwahlwahrscheinlichkeit",
                        choices = c("Proportionell", "Als Anteil an Stichprobe",
@@ -10,19 +10,18 @@ selection_probability_ui <- function(id) {
            uiOutput(ns("sp_inputs")))
 }
 
+
 # Define the module server logic
 selection_probability_server <- function(id, values) {
   moduleServer(id, function(input, output, session){
     
     ns <- session$ns
-    
-    #selection_kind <- reactiveVal(NULL)
-    #result_vec <- reactiveVal(NULL)
     selection_params <- reactiveValues()
     
     observeEvent(input$sp_kind, {
       selection_params[["kind"]] <- input$sp_kind
     })
+    
     
     # putting out a different ui to input selection probabilities
     # depending on what kind is chosen
