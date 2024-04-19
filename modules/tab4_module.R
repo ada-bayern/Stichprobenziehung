@@ -71,7 +71,7 @@ tab4server <- function(id, data) {
                                    define_layer_ui(ns(paste0("def_", layer_id)), 
                                                    unselected_cols))
       # TODO: also take the information defining the categories
-      strat_layers$columns[[layer_id]] <- define_layer_server(paste0("def_", layer_id))
+      strat_layers$columns[[layer_id]] <- define_layer_server(paste0("def_", layer_id), dataset)
       insertTab(inputId = "strata_rename_input_ui", new_def_layer_ui)
     })
     
