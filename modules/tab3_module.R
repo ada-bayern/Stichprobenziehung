@@ -71,29 +71,47 @@ tab3server <- function(id, data) {
                                choices = value_choices())
     })
     
-    # Selecting all elements when user selects "select all"
-    # Also unselects "select all" when user unselects at least one element
-    observeEvent(input$value_dropdown, {
-      if(!"Alle auswählen" %in% selected_values()){
-        if("Alle auswählen" %in% input$value_dropdown){
-          selected_values(c("Alle auswählen", value_choices()))
-        } else {
-          selected_values(input$value_dropdown)
-        }
-      } else {
-        if(any(!value_choices() %in% input$value_dropdown)){
-          selected_values(input$value_dropdown[input$value_dropdown != "Alle auswählen"])
-        } else {
-          selected_values(input$value_dropdown)
-        }
+    # Handles the logic behind select all button. The button should be unselected
+    # as soon any other button is deselected, deselect all when it is deselected, 
+    # and select all when it is selected. 
+    eval_selected_values <- function(value_choices, input_values, selected_values){
+      
+      select_all <- "Alle auswählen" %in% selected_values
+      select_all_input <- "Alle auswählen" %in% input_values
+      all_selected_input <- all(value_choices %in% input_values) 
+      all_selected <- all(value_choices %in% selected_values)
+      
+      if(select_all & !select_all_input){
+        print("deselecting all")
+        return(c())
       }
+      if(select_all & !all_selected_input){
+        return(input_values[input_values != "Alle auswählen"])
+      }
+      if(!select_all & select_all_input){
+        return(c("Alle auswählen", value_choices))
+      }
+      return(input_values)
+    }
+    
+    # evaluating change of the values selected by user, including logic for
+    # "select all" button
+    observeEvent(input$value_dropdown, {
+      selected_values(eval_selected_values(value_choices(), input$value_dropdown,
+                                           selected_values()))
     })
     
-    # renders selected values as they change 
+    # renders selected values as they change. Ignores NULL values as an empty vector
+    # is NULL
     observeEvent(selected_values(), {
+      if(length(selected_values()) == 0){
+        to_select = ""
+      } else {
+        to_select = selected_values()
+      }
       updateCheckboxGroupInput(inputId = "value_dropdown", 
-                               selected = selected_values())
-    })
+                               selected = to_select)
+    }, ignoreNULL = FALSE)
     
     # filters the population
     filtered_data <- reactive({
