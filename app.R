@@ -42,9 +42,13 @@ server <- function(input, output, session) {
   output$panel <- renderText({
     paste("Current panel: ", input$tabset)
   })
-  tab1server("tab1")
-  uploaded_data <- tab2server("tab2")
-  filtered_data <- tab3server("tab3", data = uploaded_data)
+  
+  #tab1server("tab1")
+  uploaded_data <- tab1server("tab1")
+  uploaded_data1 <- tab2server("tab2", data = uploaded_data$uploaded_data, 
+                               karten = uploaded_data$my_karte, akten = uploaded_data$my_akten,
+                               clean = uploaded_data$clean_akten)
+  filtered_data <- tab3server("tab3", data = uploaded_data1)
   tab4server("tab4", data = filtered_data)
   
 }
