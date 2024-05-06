@@ -19,6 +19,7 @@ source("modules/tab1_module.R")
 source("modules/tab2_module.R")
 source("modules/tab3_module.R")
 source("modules/tab4_module.R")
+source("modules/tab5_module.R")
 
 
 ui <- fluidPage(
@@ -32,7 +33,8 @@ ui <- fluidPage(
     tabPanel("Informationen zur Stichprobe", tab1ui("tab1")),
     tabPanel("Daten kennenlernen", tab2ui("tab2")),
     tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
-    tabPanel("Stichprobe festlegen", tab4ui("tab4")),
+    tabPanel("Kategorien angeben", tab4ui("tab4")),
+    tabPanel("Stichprobe definieren", tab5ui("tab5")),
     tabPanel("Stichprobe einsehen")
   )
 )
@@ -49,7 +51,9 @@ server <- function(input, output, session) {
                                karten = uploaded_data$my_karte, akten = uploaded_data$my_akten,
                                clean = uploaded_data$clean_akten)
   filtered_data <- tab3server("tab3", data = uploaded_data1)
-  tab4server("tab4", data = filtered_data)
+  strat_layers <- tab4server("tab4", data = filtered_data)
+  tab5server("tab5", strat_layers = strat_layers)
+  
   
 }
 

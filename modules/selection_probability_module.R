@@ -1,12 +1,12 @@
 # Define the module
 selection_probability_ui <- function(id, title) {
   ns <- NS(id)
-  tabPanel(title(),
+  tabPanel(title,
            selectInput(inputId = ns("sp_kind"),
                        "Art der Auwahlwahrscheinlichkeit",
-                       choices = c("Proportionell", "Als Anteil an Stichprobe",
+                       choices = c("Proportional", "Als Anteil an Stichprobe",
                                    "Alle auswählen"),
-                       selected = "Proportionell"),
+                       selected = "Als Anteil an Stichprobe"),
            uiOutput(ns("sp_inputs")))
 }
 
@@ -16,12 +16,9 @@ selection_probability_server <- function(id, values) {
   moduleServer(id, function(input, output, session){
     
     ns <- session$ns
-    selection_params <- reactiveValues()
+    selection_params <- reactiveValues(kind = NULL, vec = list())
     
-    observeEvent(input$sp_kind, {
-      selection_params[["kind"]] <- input$sp_kind
-    })
-    
+    values <- reactiveVal(na.omit(values))
     
     # putting out a different ui to input selection probabilities
     # depending on what kind is chosen
@@ -30,6 +27,7 @@ selection_probability_server <- function(id, values) {
         # Create a numeric input for each unique value
         output$sp_inputs <- renderUI({
           inputs <- lapply(values(), function(value) {
+            #print(paste0("ratio_", value))
             # TODO: could offer to input a percentage value
             numericInput(ns(paste0("ratio_", value)), 
                          paste0("Anteil für ", value, ":"),
@@ -40,35 +38,55 @@ selection_probability_server <- function(id, values) {
           })
           do.call(tagList, inputs)
         })
-        ratios <- lapply(values(), function(value) {
-          input[[ns(paste0("ratio_", value))]]
-        })
-        
-        setNames(ratios, values())
-        selection_params[["vec"]] <- ratios
       }
       
       if(input$sp_kind == "Alle auswählen"){
         # Create a numeric input for each unique value
         output$sp_inputs <- renderUI({
+
           checkboxGroupInput(ns("value_select"), "Alle Elemente dieses Stratum
                              auswählen", 
                              choices = values()
                              )
         })
-        bools <- as.integer(values() %in% input$value_select)
-        selection_params[["vec"]] = bools
       }
       
-      if(input$sp_kind == "Proportionell"){
+      if(input$sp_kind == "Proportional"){
         output$sp_inputs <- renderUI({
           ## TODO: Placeholder for actually calculating and displaying selection
           ## probabilities
-          HTML("Auswahlwahrscheinlichkeiten proportionell zu Vorkommen in
+          HTML("Auswahlwahrscheinlichkeiten proportionell zum Vorkommen in
                      Grundgesamtheit")
         })
         
       }
+    })
+    
+    observe({
+      #print("saving values")
+      req(input$sp_kind)
+      if(input$sp_kind == "Als Anteil an Stichprobe"){
+        ratios <- lapply(values(), function(value) {
+          req(input[[paste0("ratio_", value)]])
+          input[[paste0("ratio_", value)]]
+        })
+        ratios <- unlist(ratios)
+        names(ratios) <- values()
+        selection_params$kind <- "sample"
+      }
+      if(input$sp_kind == "Alle auswählen"){
+        req(input$value_select)
+        ratios <- ifelse(values() %in% input$value_select, 1, NA)
+        names(ratios) <- values()
+        selection_params$kind <- "population"
+      }
+      if(input$sp_kind == "Proportional") {
+        selection_params$kind <- "proportional"
+        ratios <- c()
+      }
+      
+      selection_params$vec <- ratios
+      
     })
     
     
