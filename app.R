@@ -19,6 +19,7 @@ source("modules/tab1_module.R")
 source("modules/tab2_module.R")
 source("modules/tab3_module.R")
 source("modules/tab4_module.R")
+source("modules/tab6_module.R")
 
 
 ui <- fluidPage(
@@ -27,13 +28,17 @@ ui <- fluidPage(
   titlePanel( "ADA Bayern Stichprobenziehung"
     # app title/description
   ),
-  p("Beschreibung..."),
+  p("Willkommen beim Stichproben-Tool. Hier können Sie Ihre Daten laden und direkt 
+               alle wichtigen deskriptiven Statistiken einsehen. In den weiteren Tabs, können Sie 
+               die geschichtete Stichprobe durchführen und Ihre Stichprobe und die dazugehörige 
+                Dokumentation herunterladen."),
+  
   tabsetPanel(
-    tabPanel("Informationen zur Stichprobe", tab1ui("tab1")),
+    tabPanel("Startseite", tab1ui("tab1")),
     tabPanel("Daten kennenlernen", tab2ui("tab2")),
     tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
     tabPanel("Stichprobe festlegen", tab4ui("tab4")),
-    tabPanel("Stichprobe einsehen")
+    tabPanel("Stichprobe einsehen", tab6ui("tab6"))
   )
 )
 server <- function(input, output, session) {
@@ -50,6 +55,7 @@ server <- function(input, output, session) {
                                clean = uploaded_data$clean_akten)
   filtered_data <- tab3server("tab3", data = uploaded_data1)
   tab4server("tab4", data = filtered_data)
+  tab6server("tab6")
   
 }
 

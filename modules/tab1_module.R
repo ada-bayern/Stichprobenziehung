@@ -3,13 +3,43 @@
 tab1ui <- function(id) {
   ns <- NS(id)
   fluidPage(
-    titlePanel("Informationen"),
+    fluidRow(
     br(),
-    h3("Bitte laden Sie hier die gewünschte Datei im CSV-Format hoch. (Max. 160mb) "), 
-    fileInput(ns("file"), "Daten", buttonLabel = "Hochladen"),
-    h3("Hier können Sie optional die Karten-Datei im RDS-Format hochladen."), 
-    fileInput(ns("file2"), "Karte", buttonLabel = "Hochladen"),
-    br()
+    column(width = 8,
+           tags$b("Allgemeine Informationen:"),
+              h5("Bitte laden Sie hier alle notwendigen Dateien hoch und geben alle wichtigen Informationen in die 
+                 vorgegebenen Textfelder ein. Alle Informationen, die Sie manuell eingeben, werden gespeichert und 
+                 in die Dokumentation der Stichprobe übernommen. Diese können Sie in dem letzten Tab 'Stichprobe einsehen' herunterladen. Bitte beachten Sie, dass Sie die Tabs immer von links nach rechts bedienen und keine 
+                 Tabs überspringen.")),
+    br()),
+    tags$b("Erstellen Sie eine neue Stichprobe:"),
+    br(),
+    br(),
+    fluidRow(
+      sidebarPanel(
+        h5("Bitte laden Sie hier die Metadaten der Akten und die Kartendatei hoch."), 
+        fileInput(ns("file"), "Metadaten (CSV-Format, max. 160mb) ", buttonLabel = "Hochladen"),
+        fileInput(ns("file2"), "Kartendatei (RDS-Format)", buttonLabel = "Hochladen"),
+      ),
+    sidebarPanel(
+      h5("Diese Angaben werden in die Stichproben Dokumentation übernommen."),
+           textInput("the_name", "Bitte geben Sie hier Ihren Namen ein."),
+           textInput("name_other", "Bitte geben Sie hier das Jahr der Stichprobenziehung ein.")
+           )
+    ),
+    br(),
+    tags$b("ODER sehen Sie eine bisher gezogene Stichprobe ein:"),
+    br(),
+    br(),
+    fluidRow(
+      sidebarPanel(
+        h5("Hier können Sie Ihre vorherig gezogene Stichprobe hochladen und alle deskriptiven Statistiken 
+           und Informationen einsehen. Laden Sie hierfür die ...Datei hoch, die Sie bei der Stichprobe neben der Dokumentation und 
+           CSV-Datei herunterladen haben."), 
+        fileInput(ns("file3"), "Stichprobendatei", buttonLabel = "Hochladen")
+      )
+      
+    )
   )
 }
 
@@ -21,6 +51,7 @@ tab1server <- function(id) {
     my_akten <- reactiveVal(NULL)
     clean_akten <- reactiveVal(NULL)
     my_karte <- reactiveVal(NULL)
+    old_sample <- reactiveVal(NULL)
     
     # Upload file
     observeEvent(input$file, {
@@ -74,6 +105,10 @@ tab1server <- function(id) {
       my_karte(my_karte1)
     })
     
+    observeEvent(input$file3, {
+      
+      # new_sample(read.csv(input$file3$datapath))
+    })
     # Return uploaded data
     return(list(clean_akten = clean_akten, my_karte = my_karte, 
                 my_akten = my_akten, uploaded_data = uploaded_data))
