@@ -31,7 +31,8 @@ define_layer_ui <- function(id, col_options) {
                    choices = c("Numerisch", "Kategorisch"),
                    selected = "Numerisch"),
       numericInput(ns("num_categories"), "Anzahl der Kategorien", value = 2, min = 2, step = 1),
-      uiOutput(ns("def_categories_ui"))
+      uiOutput(ns("def_categories_ui")),
+      actionButton(ns("apply_button"), label = "Anwenden")
       
     )
   )
@@ -45,22 +46,15 @@ define_layer_server <- function(id, dataset) {
     ns <- session$ns
     
     # Reactive value to store the selected column
-    selected_column <- reactiveVal(NULL)
+    selected_column <- reactiveValues(name = NULL, data_type = NULL, 
+                                      categories = list())
     
     # reactive value to store number of categories
     num_categories <- reactiveVal(NULL)
     
-    # stores what kind the data in selected column is (categorical or numeric)
-    #TODO: there might be some validation of whether this is correct
-    data_type <- reactiveVal(NULL)
-    
-    # definitions of categories
-    categories_def_c <- reactiveValues()
-    categories_def_n <- reactiveValues()
-    
     # Update selected column, number of categories, and data type
     observeEvent(input$column_select, {
-      selected_column(input$column_select)
+      selected_column$name <- input$column_select
     })
     
     observeEvent(input$num_categories, {
@@ -70,24 +64,9 @@ define_layer_server <- function(id, dataset) {
     #also resetting category definitions when different data type is selected
     observeEvent(input$data_type, {
       if(input$data_type == "Kategorisch"){
-        data_type("categorical")
+        selected_column$data_type <- "categorical"
       } else {
-        data_type("numerical")
-      }
-    })
-    
-    #update category definitions
-    observe({
-      req(data_type())
-      if (data_type() == "categorical"){
-        for (n in 1:num_categories()){
-          categories_def_c$n <- input[[paste0("list_cat_", n)]]
-        }
-      } else {
-        for (n in 1:num_categories()){
-          categories_def_n$n <- c(input[[paste0("category_", n, "_min")]], 
-                                  input[[paste0("category_", n, "_max")]])
-          }
+        selected_column$data_type <- "numerical"
       }
     })
   
@@ -101,8 +80,8 @@ define_layer_server <- function(id, dataset) {
     # Rendering the ui for defining categories
     output$def_categories_ui <- renderUI({
       
-      if (data_type() == "categorical") {
-        vals <- unique(dataset()[[selected_column()]])
+      if (selected_column$data_type == "categorical") {
+        vals <- unique(dataset()[[selected_column$name]])
         
         fluidRow(
           column(6,
@@ -141,19 +120,44 @@ define_layer_server <- function(id, dataset) {
       }
       
       else{
-        min_value <- min(selected_column(), na.rm = TRUE)
-        max_value <- max(selected_column(), na.rm = TRUE)
+        min_value <- min(num_categories(), na.rm = TRUE)
+        max_value <- max(num_categories(), na.rm = TRUE)
         
         lapply(1:num_categories(), function(i) {
           fluidRow(
-            column(6, numericInput(ns(paste0("category_", i, "_min")), paste0("Kategorie ", i, " von"), min_value)),
-            column(6, numericInput(ns(paste0("category_", i, "_max")), paste0("Kategorie ", i, " bis"), max_value))
+            column(6, numericInput(ns(paste0("min_cat_", i)), paste0("Kategorie ", i, " von"), value = 0)),
+            column(6, numericInput(ns(paste0("max_cat_", i)), paste0("Kategorie ", i, " bis"), value = 0))
           )
         })
       }
-      
-      
     })
+    
+    # Update category definitions
+    observeEvent(input$apply_button, {
+      req(selected_column$data_type)
+      if(selected_column$data_type == "categorical"){
+        categories <- lapply(1:num_categories(), function(i){
+          req(input[[paste0("list_cat_", i)]])
+          input[[paste0("list_cat_", i)]]
+        })
+        names <- lapply(1:num_categories(), function(i){
+          name <- input[[paste0("name_cat_", i)]]
+          ifelse(!is.null(name), name, paste("Kategorie", i))
+        })
+      }else{
+        categories <- lapply(1:num_categories(), function(i){
+          req(input[[paste0("min_cat_", i)]], input[[paste0("max_cat_", i)]])
+          c(input[[paste0("min_cat_", i)]], input[[paste0("max_cat_", i)]])
+        })
+        names <- lapply(1:num_categories(), function(i){
+          paste0(input[[paste0("min_cat_", i)]], input[[paste0("max_cat_", i)]])
+        })
+      }
+      names(categories) <- names
+      selected_column$categories <- categories
+    })
+    
+    
     # Return name of selected column.
     # TODO: return all collected information which define categories
     return(selected_column)

@@ -82,7 +82,6 @@ tab3server <- function(id, data) {
       all_selected <- all(value_choices %in% selected_values)
       
       if(select_all & !select_all_input){
-        print("deselecting all")
         return(c())
       }
       if(select_all & !all_selected_input){
