@@ -19,11 +19,9 @@ source("modules/tab1_module.R")
 source("modules/tab2_module.R")
 source("modules/tab3_module.R")
 source("modules/tab4_module.R")
-<<<<<<< HEAD
-source("modules/tab6_module.R")
-=======
 source("modules/tab5_module.R")
->>>>>>> 9b3ae6414339ad75eeadef882e98c6aa98a218d3
+source("modules/tab6_module.R")
+
 
 
 ui <- fluidPage(
@@ -41,14 +39,9 @@ ui <- fluidPage(
     tabPanel("Startseite", tab1ui("tab1")),
     tabPanel("Daten kennenlernen", tab2ui("tab2")),
     tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
-<<<<<<< HEAD
     tabPanel("Stichprobe festlegen", tab4ui("tab4")),
-    tabPanel("Stichprobe einsehen", tab6ui("tab6"))
-=======
-    tabPanel("Kategorien angeben", tab4ui("tab4")),
     tabPanel("Stichprobe definieren", tab5ui("tab5")),
-    tabPanel("Stichprobe einsehen")
->>>>>>> 9b3ae6414339ad75eeadef882e98c6aa98a218d3
+    tabPanel("Stichprobe einsehen", tab6ui("tab6"))
   )
 )
 server <- function(input, output, session) {
@@ -64,14 +57,9 @@ server <- function(input, output, session) {
                                karten = uploaded_data$my_karte, akten = uploaded_data$my_akten,
                                clean = uploaded_data$clean_akten)
   filtered_data <- tab3server("tab3", data = uploaded_data1)
-<<<<<<< HEAD
-  tab4server("tab4", data = filtered_data)
-  tab6server("tab6")
-=======
   strat_layers <- tab4server("tab4", data = filtered_data)
   tab5server("tab5", strat_layers = strat_layers)
-  
->>>>>>> 9b3ae6414339ad75eeadef882e98c6aa98a218d3
+  tab6server("tab6")
   
 }
 
