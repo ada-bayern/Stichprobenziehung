@@ -2,7 +2,6 @@
 source("modules/define_layer_module.R")
 source("modules/selection_probability_module.R")
 library(gtsummary)
-#library(aktenstichprobe)
 source(file.path("../aktenstichprobe/R", "select_groups.R"))
 
 install.packages()
@@ -41,15 +40,27 @@ tab4server <- function(id, data) {
       dataset(data())
     })
     
-    #data_categorized <- reactiveVal(data.frame())
-    
-    # names of stratification layers
+    # All the relevant information for stratification
+    # ids: character vector of layer ids (layer_1, layer_2, etc.)
+    # columns: named list with the names of columns selected for stratification.
+    #   The names correspond to ids 
+    # data_types: Named list indiating for each column whether the user has selected
+    #   categorical or numerical values ("categorical" or "numerical")
+    # categories: Named list of named lists of lists. The top-layer names correspond to layer_ids
+    #   Each top layer list element contains a named list in which the names define
+    #   a category name and each element is a list defining the category. 
+    # data: The computed data with only the selected columns and the applied 
+    #   categorizations
+    # sel_kind: Created here, but values are only inserted in tab 5. Named list
+    #   indicating for each column how the user defines the selection probabilities
+    #   or strata sizes in UI. ("proportional", "sample" or "population"). Names
+    #   correspond to layer_ids
+    # sel_params: Also computed in tab 5. The relevant parameters for specifying
+    #   strata sizes using the R package.
     strat_layers <- reactiveValues(ids = c(), columns = list(), data_types = list(), 
-                                   categories = list(), sel_kind = list(), 
-                                   sel_params = list(), data = NULL)
+                                   categories = list(), data = NULL,
+                                   sel_kind = list(), sel_params = list())
     
-    # data with categories for stratification
-    #cat_data <- reactiveVal(NULL)
     
     # Adding a new stratification layer
     observeEvent(input$add_strat_layer_button, {
@@ -103,8 +114,8 @@ tab4server <- function(id, data) {
       })
     })
     
-    # 
-    #strat_layers$data <- reactive({
+    # Applies the categorization to the data and saves a data frame of only the 
+    # selected columns with the created categories
     observe({
       cols <- lapply(strat_layers$ids, function(id){
         req(strat_layers$data_types[[id]], unlist(strat_layers$categories[[id]]))

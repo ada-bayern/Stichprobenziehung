@@ -62,8 +62,10 @@ selection_probability_server <- function(id, values) {
       }
     })
     
+    
+    # Calculating the selection params which define strata sizes by way of defining
+    # category sizes. Differs based on what kind of interface user has selected
     observe({
-      #print("saving values")
       req(input$sp_kind)
       if(input$sp_kind == "Als Anteil an Stichprobe"){
         ratios <- lapply(values(), function(value) {
@@ -86,7 +88,6 @@ selection_probability_server <- function(id, values) {
       }
       
       selection_params$vec <- ratios
-      
     })
     
     

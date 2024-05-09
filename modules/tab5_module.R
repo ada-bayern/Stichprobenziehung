@@ -33,8 +33,10 @@ tab5server <- function(id, strat_layers) {
       dataset(strat_layers$data)
     })
     
+    # table of computed strata sizes (computed based on inputs)
     strata <- reactiveVal(NULL)
     
+    # sample size (computed based on user input)
     sample_size <- reactiveVal(NULL)
     
     observeEvent(input$sample_size, {
@@ -55,6 +57,7 @@ tab5server <- function(id, strat_layers) {
     })
   
     
+    # computes the unique values of each column in the categorized data set
     observe({
       for(id in strat_layers$ids){
         req(strat_layers$columns[[id]] %in% colnames(strat_layers$data))
@@ -78,6 +81,9 @@ tab5server <- function(id, strat_layers) {
       }
     })
     
+    
+    # Gathering the inputs for stratification size computation via package and 
+    # putting inputs into named list for function call with do.call()
     observe({
       req(strat_layers$data, sample_size(), unlist(strat_layers$sel_kind))
       args <- list(
@@ -86,8 +92,6 @@ tab5server <- function(id, strat_layers) {
         strat_names = unlist(colnames(strat_layers$data)),
         ratio_types = unlist(strat_layers$sel_kind)
       )
-      
-      print(strat_layers$sel_params)
       ratios <- lapply(strat_layers$ids, function(id){
         strat_layers$sel_params[[id]]
       })
@@ -98,6 +102,8 @@ tab5server <- function(id, strat_layers) {
       strata(str)
     })
     
+    
+    # rendering the calculated strata sizes
     output$strata <- renderTable({
       strata()
     }

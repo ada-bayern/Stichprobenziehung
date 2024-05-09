@@ -42,6 +42,9 @@ tab3server <- function(id, data) {
     })
     
     # Defining the column and the column values by which to filter
+    # selected_column: string of column selected for filtering
+    # selected_values: character vector of values selected from that column
+    # value_choices: the possible values of the selected column plus "Alle auswählen"
     selected_column <- reactiveVal(NULL)
     selected_values <- reactiveVal(NULL)
     value_choices <- reactiveVal(NULL)
