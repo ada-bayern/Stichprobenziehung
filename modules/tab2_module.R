@@ -74,7 +74,7 @@ tab2ui <- function(id){
   )
 }
 
-tab2server <- function(id, data, karten, akten, clean) {
+tab2server <- function(id, data, map_file) {
   moduleServer(id, function(input, output, session) {
     
     #Include a text, when the data is missing 
@@ -88,55 +88,48 @@ tab2server <- function(id, data, karten, akten, clean) {
       }
     })
     
-    # Saving the data uploaded in another tab and passes to this module.
-    uploaded_data <- reactiveVal(NULL)
-    my_akten <- reactiveVal(NULL)
-    clean_akten <- reactiveVal(NULL)
-    my_karte <- reactiveVal(NULL)
     
     observeEvent(data(), {
-      uploaded_data(data())
-      clean_akten(clean())
-      my_akten(akten())
       
       #Introduction
       output$text_main <- renderText({
-        paste("Hier können Sie die Daten kennenlernen und alle wichtigen deskriptiven Statistiken und Graphen einsehen.")
+        "Hier können Sie die Daten kennenlernen und alle wichtigen deskriptiven Statistiken und Graphen einsehen."
       })
       
       #show head
       output$text1 <- renderText({
-        paste("Hier wird die Zusammenfassung des jeweiliges Datensatzes gezeigt. ")
+        "Hier wird die Zusammenfassung des jeweiliges Datensatzes gezeigt. "
       })
+      
       # output$head <- renderTable({
       #   head(uploaded_data())
       # })
       output$summary <- renderPrint({
         if (input$chosen_data == "Metadaten der Akten") {
-          summary(my_akten())
+          summary(data())
         } else {
-          summary(my_karte())
+          summary(map_file())
         }
       })
       
       output$text2 <- renderText({
-        paste("Diese Tabelle zeigt die sechs ersten Reihen des hochgeladenen Datensatzes auf der transformierten Aktenebene.")
+        "Diese Tabelle zeigt die sechs ersten Reihen des hochgeladenen Datensatzes."
       })
       
       output$head.akten <- renderTable({
-        head(my_akten())
+        head(data())
       })
       
         # output$summary1 <- renderPrint({
         #   summary(my_karte())
         # })
       output$text3 <- renderText({
-        paste("Diese Grafik zeigt die Summe der Akten pro Amtsgerichtsbezirk.")
+        "Diese Grafik zeigt die Summe der Akten pro Amtsgerichtsbezirk."
       })
       
         #plot
           output$plot1 <- renderPlot({
-            ggplot(my_akten(), aes(Gericht)) +
+            ggplot(daat(), aes(Gericht)) +
               geom_bar() +
               scale_x_discrete(guide = guide_axis(angle = 90)) +
               ylab("Anzahl der Fälle") +
@@ -152,16 +145,15 @@ tab2server <- function(id, data, karten, akten, clean) {
           # })
     }) 
       
-    observeEvent(karten(), {
-      my_karte(karten())
+    observeEvent(map_file(), {
       
       output$text4 <- renderText({
-        paste("Diese Grafik zeigt die Aufteilung der Amtsgerichtbezirke, die durch die hochgeladene 
-              Karten-Datei definiert wurde.")
+      "Diese Grafik zeigt die Aufteilung der Amtsgerichtbezirke, die durch die hochgeladene 
+              Karten-Datei definiert wurde."
       })
       
           output$plot2 <- renderPlot({
-            ggplot(data = my_karte(), aes(fill = court)) +
+            ggplot(data = map_file(), aes(fill = court)) +
               geom_sf(aes(geometry = geometry), color = "white") +
               geom_sf_text(
                 aes(geometry = geometry, label = court),
@@ -176,11 +168,11 @@ tab2server <- function(id, data, karten, akten, clean) {
 
           
           output$text5 <- renderText({
-            paste("Diese Grafik zeigt die Anzahl der Fälle pro Amtsgerichtbezirk.")
+            "Diese Grafik zeigt die Anzahl der Fälle pro Amtsgerichtbezirk."
           })
           
           output$plot3 <- renderPlot({
-            ggplot(data = my_karte(), aes(fill = `Anzahl der Fälle`)) +
+            ggplot(data = map_file(), aes(fill = `Anzahl der Fälle`)) +
               geom_sf(aes(geometry = geometry), color = "transparent") +
               geom_sf_text(
                 aes(geometry = geometry, label = court),
@@ -280,7 +272,5 @@ tab2server <- function(id, data, karten, akten, clean) {
 
     })
     
-     # Return uploaded data
-     return(clean_akten)
   })
 }
