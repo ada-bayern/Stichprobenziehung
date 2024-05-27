@@ -129,7 +129,7 @@ tab2server <- function(id, data, map_file) {
       
         #plot
           output$plot1 <- renderPlot({
-            ggplot(daat(), aes(Gericht)) +
+            ggplot(data(), aes(Gericht)) +
               geom_bar() +
               scale_x_discrete(guide = guide_axis(angle = 90)) +
               ylab("Anzahl der Fälle") +
