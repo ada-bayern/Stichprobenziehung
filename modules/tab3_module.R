@@ -36,10 +36,12 @@ tab3server <- function(id, data) {
     max_choices = 100
     
     # Saving the data uploaded in another tab and passes to this module.
-    dataset <- reactiveVal(NULL)
-    observeEvent(data(), {
-      dataset(data())
-    })
+    #dataset <- reactiveVal(NULL)
+    #observeEvent(data(), {
+    #  dataset(data())
+    #})
+    # The filtered population
+    filtered_data <- reactiveVal(NULL)
     
     # Defining the column and the column values by which to filter
     # selected_column: string of column selected for filtering
@@ -116,19 +118,20 @@ tab3server <- function(id, data) {
     }, ignoreNULL = FALSE)
     
     # filters the population
-    filtered_data <- reactive({
-      req(selected_values())
-      subset(dataset(), dataset()[[selected_column()]] %in% selected_values())
+    observe({
+      req(data(), selected_column())
+      filtered_data(subset(data(), data()[[selected_column()]] %in% selected_values()))
     })
+      
     
     # displays number of rows in filtered data
     output$pop_count <- renderText({
-      paste("Zeilen:", nrow(filtered_data()))
+      paste("Zeilen insgesamt:", nrow(filtered_data()))
     })
     
     # Showing the filtered table
     output$filtered_table <- renderTable({
-      head(filtered_data(), 100)
+      head(filtered_data(), 20)
     })
     
     # return filtered data

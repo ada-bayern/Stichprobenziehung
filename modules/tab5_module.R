@@ -60,10 +60,9 @@ tab5server <- function(id, strat_layers) {
     # computes the unique values of each column in the categorized data set
     observe({
       for(id in strat_layers$ids){
-        req(strat_layers$columns[[id]] %in% colnames(strat_layers$data))
-        strat_layers$unique_vals[[id]] <- unique(strat_layers$data[[strat_layers$columns[[id]]]])
+        strat_layers$unique_vals[[id]] <- unique(strat_layers$cols_categorized[[id]])
       }
-    })
+    }, priority = 2)
     
     
     # creating moduleservers for the selection probability logic and saving results
@@ -71,21 +70,25 @@ tab5server <- function(id, strat_layers) {
       ns <- session$ns
       for (layer_id in strat_layers$ids){
         col_name <- strat_layers$columns[[layer_id]]
-        req(strat_layers$unique_vals[[layer_id]])
-        ret <- selection_probability_server(paste0("sp_", layer_id), strat_layers$unique_vals[[layer_id]])
         observe({
-          strat_layers$sel_kind[[layer_id]] = ret$kind
-          strat_layers$sel_params[[layer_id]] = ret$vec
+          req(strat_layers$unique_vals[[layer_id]])
+          ret <- selection_probability_server(paste0("sp_", layer_id), strat_layers$unique_vals[[layer_id]])
+          observe({
+            strat_layers$sel_kind[[layer_id]] = ret$kind
+            strat_layers$sel_params[[layer_id]] = ret$vec
+          })
         })
         
+        
       }
-    })
+    }, priority = 1)
     
     
     # Gathering the inputs for stratification size computation via package and 
     # putting inputs into named list for function call with do.call()
     observe({
-      req(strat_layers$data, sample_size(), unlist(strat_layers$sel_kind))
+      req(strat_layers$data, sample_size(), unlist(strat_layers$sel_kind), 
+          length(strat_layers$sel_kind) == length(strat_layers$ids))
       args <- list(
         x = strat_layers$data,
         sample_size = sample_size(),
@@ -100,7 +103,8 @@ tab5server <- function(id, strat_layers) {
       args <- c(args, ratios)
       str <- do.call(strata_sizes, args)
       strata(str)
-    })
+    },
+    priority = 0)
     
     
     # rendering the calculated strata sizes

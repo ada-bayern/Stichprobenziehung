@@ -12,53 +12,40 @@ selection_probability_ui <- function(id, title) {
 
 
 # Define the module server logic
-selection_probability_server <- function(id, values) {
+selection_probability_server <- function(id, vals) {
   moduleServer(id, function(input, output, session){
     
     ns <- session$ns
     selection_params <- reactiveValues(kind = NULL, vec = list())
     
-    values <- reactiveVal(na.omit(values))
+    values <- reactiveVal(na.omit(vals))
     
-    # putting out a different ui to input selection probabilities
-    # depending on what kind is chosen
-    observeEvent(input$sp_kind, {
+    output$sp_inputs <- renderUI({
       if(input$sp_kind == "Als Anteil an Stichprobe"){
         # Create a numeric input for each unique value
-        output$sp_inputs <- renderUI({
-          inputs <- lapply(values(), function(value) {
-            #print(paste0("ratio_", value))
-            # TODO: could offer to input a percentage value
-            numericInput(ns(paste0("ratio_", value)), 
-                         paste0("Anteil für ", value, ":"),
-                         value = 1 / length(values()),
-                         min = 0,
-                         max = 1, 
-                         step = 0.01)
-          })
-          do.call(tagList, inputs)
+        inputs <- lapply(values(), function(value) {
+          # TODO: could offer to input a percentage value
+          numericInput(ns(paste0("ratio_", value)), 
+                       paste0("Anteil für ", value, ":"),
+                       value = 1 / length(values()),
+                       min = 0,
+                       max = 1, 
+                       step = 0.01)
         })
+        do.call(tagList, inputs)
       }
       
-      if(input$sp_kind == "Alle auswählen"){
+      else if(input$sp_kind == "Alle auswählen"){
         # Create a numeric input for each unique value
-        output$sp_inputs <- renderUI({
-
-          checkboxGroupInput(ns("value_select"), "Alle Elemente dieses Stratum
-                             auswählen", 
-                             choices = values()
-                             )
-        })
+        checkboxGroupInput(ns("value_select"), "Alle Elemente dieses Stratum auswählen", 
+                           choices = values()
+        )
       }
       
-      if(input$sp_kind == "Proportional"){
-        output$sp_inputs <- renderUI({
-          ## TODO: Placeholder for actually calculating and displaying selection
-          ## probabilities
-          HTML("Auswahlwahrscheinlichkeiten proportionell zum Vorkommen in
-                     Grundgesamtheit")
-        })
-        
+      else if(input$sp_kind == "Proportional"){
+        ## TODO: Placeholder for actually calculating and displaying selection
+        ## probabilities
+        HTML("Auswahlwahrscheinlichkeiten proportionell zum Vorkommen in Grundgesamtheit")
       }
     })
     
