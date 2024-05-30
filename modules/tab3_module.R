@@ -136,9 +136,8 @@ tab3server <- function(id, data) {
     
    
     # return filtered data
-    return(list(filtered_data = filtered_data,  selected_column =selected_column,
-           selected_values = selected_values,
-           value_choices = value_choices))
+    return(list(filtered_data = filtered_data,  selected_column = selected_column,
+           selected_values = selected_values, value_choices = value_choices))
     
   })   
 }
