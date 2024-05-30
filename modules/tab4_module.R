@@ -51,6 +51,7 @@ tab4server <- function(id, data) {
     #   a category name and each element is a list defining the category. 
     # data: The computed data with only the selected columns and the applied 
     #   categorizations
+    # cols_categorized: list of the columns with categorizations applied
     # sel_kind: Created here, but values are only inserted in tab 5. Named list
     #   indicating for each column how the user defines the selection probabilities
     #   or strata sizes in UI. ("proportional", "sample" or "population"). Names
@@ -59,11 +60,13 @@ tab4server <- function(id, data) {
     #   strata sizes using the R package.
     strat_layers <- reactiveValues(ids = c(), columns = list(), data_types = list(), 
                                    categories = list(), data = NULL,
+                                   cols_categorized = list(),
                                    sel_kind = list(), sel_params = list())
     
     
     # Adding a new stratification layer
     observeEvent(input$add_strat_layer_button, {
+      
       # Create new UI for defining layer and adding it to list of tabs
       ns <- session$ns
       
@@ -114,26 +117,32 @@ tab4server <- function(id, data) {
       })
     })
     
-    # Applies the categorization to the data and saves a data frame of only the 
-    # selected columns with the created categories
+    
+    categorize_column <- function(id) {
+      column_name <- strat_layers$columns[[id]]
+      data_type <- strat_layers$data_types[[id]]
+      req(unlist(strat_layers$categories[[id]]))
+      categories <- strat_layers$categories[[id]]
+      
+      if (data_type == "categorical") {
+        strat_layers$cols_categorized[[id]] <- select_groups(
+          dataset()[[column_name]], categories, NA)
+      } else {
+        breaks <- c(0, categories)
+        strat_layers$cols_categorized[[id]] <- cut(
+          dataset()[[column_name]],
+          breaks = breaks, right = FALSE, include.lowest = TRUE
+        )
+      }
+    }
+    
     observe({
-      cols <- lapply(strat_layers$ids, function(id){
-        req(strat_layers$data_types[[id]], unlist(strat_layers$categories[[id]]))
-        if(strat_layers$data_types[[id]] == "categorical"){
-          column_name <- strat_layers$columns[[id]]
-          categories <- strat_layers$categories[[id]]
-          data_cat <- select_groups(dataset(), column_name, categories,
-                                    "new_column")
-          data_cat[["new_column"]]
-        }else{
-          column_name <- strat_layers$columns[[id]]
-          categories <- strat_layers$categories[[id]]
-          breaks <- c(lapply(categories, function(category) category[[1]]), Inf)
-          col_categorized <- cut(dataset()[[column_name]], 
-                                 breaks=breaks, right = FALSE, include.lowest = TRUE)
-          col_categorized
-        }
-      })
+      lapply(strat_layers$ids, categorize_column)
+    })
+    
+    # saves a data frame of only the selected columns with the created categories
+    observeEvent(strat_layers$cols_categorized, {
+      cols <- strat_layers$cols_categorized
       names(cols) <- strat_layers$columns
       strat_layers$data <- data.frame(cols)
     })

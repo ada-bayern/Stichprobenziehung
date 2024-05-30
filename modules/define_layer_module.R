@@ -120,15 +120,11 @@ define_layer_server <- function(id, dataset) {
       }
       
       else{
-        min_value <- min(num_categories(), na.rm = TRUE)
-        max_value <- max(num_categories(), na.rm = TRUE)
-        
-        lapply(1:num_categories(), function(i) {
-          fluidRow(
-            column(6, numericInput(ns(paste0("min_cat_", i)), paste0("Kategorie ", i, " von"), value = 0)),
-            column(6, numericInput(ns(paste0("max_cat_", i)), paste0("Kategorie ", i, " bis"), value = 0))
-          )
-        })
+        list(
+          numericInput(ns(paste0("min_cat_", 1)), paste0("Kategorie 1", " von"), value = 0),
+          lapply(1:num_categories(), function(i) {
+              numericInput(ns(paste0("max_cat_", i)), paste0("Kategorie ", i, " bis"), value = 0)
+          }))
       }
     })
     
@@ -146,11 +142,11 @@ define_layer_server <- function(id, dataset) {
         })
       }else{
         categories <- lapply(1:num_categories(), function(i){
-          req(input[[paste0("min_cat_", i)]], input[[paste0("max_cat_", i)]])
-          c(input[[paste0("min_cat_", i)]], input[[paste0("max_cat_", i)]])
+          req(input[[paste0("max_cat_", i)]])
+          input[[paste0("max_cat_", i)]]
         })
         names <- lapply(1:num_categories(), function(i){
-          paste0(input[[paste0("min_cat_", i)]], input[[paste0("max_cat_", i)]])
+          paste("Kategorie", i)
         })
       }
       names(categories) <- names

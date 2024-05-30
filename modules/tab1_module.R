@@ -48,64 +48,32 @@ tab1server <- function(id) {
     
     # Reactive value to store the uploaded dataframe
     uploaded_data <- reactiveVal(NULL)
-    my_akten <- reactiveVal(NULL)
-    clean_akten <- reactiveVal(NULL)
-    my_karte <- reactiveVal(NULL)
-    
     old_sample <- reactiveVal(NULL)
-    the_name <- reactiveVal(NULL)
-    name_other <- reactiveVal(NULL)
+    ident_primary <- reactiveVal(NULL)
+    ident_secondary <- reactiveVal(NULL)
+    map_file <- reactiveVal(NULL)
     
     # Upload file
     observeEvent(input$file, {
       #upload data
+      #TODO: possibly only chose rows chosen by user
       uploaded_data(read.csv(input$file$datapath))
       
-      #dataset on the "akten" level
-      akten <- group_by(uploaded_data(), 
-                        `Gericht`,
-                        `Aktenzeichen`,
-                        `Streitwert.in.EURO`,
-                        `Gesamtstreitgegenstand`,
-                        `Erledigungsgrund`,
-                        `Dauer.des.Verfahrens.in.Tagen`,
-                        `Anzahl.Termine`,
-                        `Archivstatus`,
-                        `Anbietungsgrund..manuell.erfasst.`,
-                        `Anbietungsgrund`)
-      akten <- summarise(akten, `Anzahl Beteiligte` = n()) 
-      akten <- as.data.frame(akten)
-      akten <- mutate(akten,Index = row_number())
-      
-      my_akten(akten)
-      
-      #clean the "akten" file and mutate
-      tmp_Gericht <- sub("Amtsgericht ", "", my_akten()$Gericht)
-      tmp_Gericht <- sub(" Zweigstelle.*", "", tmp_Gericht)
-      tmp_Gericht <- sub(" i.d. ", " i. d. ", tmp_Gericht)
-      tmp_Gericht <- sub(" a.d. ", " a. d. ", tmp_Gericht)
-      tmp_Gericht <- sub(" am ", " a. ", tmp_Gericht)
-      tmp_Gericht <- sub(" i.OB", " i. OB", tmp_Gericht)
-      
-      tmp_Gericht1 <- mutate(my_akten(), `Bezirk` = tmp_Gericht)
-      clean_akten(tmp_Gericht1)
-      
-      
-      #karte_amtsgerichte$`Anzahl der Fälle` <- fallzahl_pro_bezirk$Anzahl[match(karte_amtsgerichte$court, fallzahl_pro_bezirk$Bezirk)]
     })
     
     observeEvent(input$file2, {
-      my_karte(readRDS(input$file2$datapath))
       
       #regions and their numbers of files 
-      fallzahlen1 <- group_by(clean_akten(), Bezirk)
-      fallzahlen1 <- summarise(fallzahlen1, Anzahl = n())
-      fallzahlen1 <- as.data.frame(fallzahlen1)
+      # TODO: user should be able to pick columns with map region, or this could
+      # be recognized automatically
+      data_counts <- group_by(uploaded_data(), Bezirk)
+      data_counts <- summarise(data_counts, Anzahl = n())
+      data_counts <- as.data.frame(data_counts)
       
       
-      my_karte1 <- my_karte()
-      my_karte1$`Anzahl der Fälle` <- fallzahlen1$Anzahl[match(my_karte1$court, fallzahlen1$Bezirk)]
-      my_karte(my_karte1)
+      mf <- readRDS(input$file2$datapath)
+      mf$`Anzahl der Fälle` <- data_counts$Anzahl[match(mf$court, data_counts$Bezirk)]
+      map_file(mf)
     })
     
     observeEvent(input$file3, {
@@ -115,20 +83,18 @@ tab1server <- function(id) {
     })
     
     observeEvent(input$the_name, {
-      the_name(input$the_name)
+      ident_primary(input$the_name)
       
     })
     
     observeEvent(input$name_other, {
-      name_other(input$name_other)
+      ident_secondary(input$name_other)
       
     })
     
     # Return uploaded data
-    return(list(clean_akten = clean_akten, my_karte = my_karte, 
-                my_akten = my_akten, uploaded_data = uploaded_data, 
-                old_sample = old_sample, the_name = the_name, 
-                name_other = name_other))
+    return(list(uploaded_data = uploaded_data, map_file = map_file, old_sample = old_sample,
+               ident_primary = ident_primary, ident_secondary = ident_secondary))
     
   })
 }

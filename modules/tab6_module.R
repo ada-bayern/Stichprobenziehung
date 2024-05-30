@@ -1,3 +1,5 @@
+source(file.path("../aktenstichprobe/R", "strat_sample.R"))
+
 
 # Define UI
 tab6ui <- function(id){
@@ -11,10 +13,10 @@ tab6ui <- function(id){
               Alle Angaben, die Sie getätigt haben, wurden gesichert und werden in einer PDF-Datei 
               herausgegeben. Neben der Dokumentation können Sie auch die CSV-Dateien der Stichprobe herunterladen. 
               Diese besteht aus zwei Versionen: Eine enthält die kompletten Meta-Daten und die zweite Version besteht nur 
-              aus den Akten, die auch ausgewählt wurden. "
-    #  ,
-    #textOutput(ns("text6"))
-    ),
+              aus den Akten, die auch ausgewählt wurden. ",
+      br(),
+      actionButton(ns("sample_button"), "Stichprobe ziehen"),
+      DTOutput(ns("sample_table"))),
     sidebarPanel(
       actionButton(ns("create_rmd"), "Erstellen der Dokumentation"),
       br(), 
@@ -27,9 +29,12 @@ tab6ui <- function(id){
   )
 }
 
+
 tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_size,
-                       selected_column,selected_values, value_choices) {
+                       selected_column, selected_values, value_choices) {
   moduleServer(id, function(input, output, session) {
+    
+    sample <- reactiveVal(NULL)
     
     ###############################################################################
     #### Create R-Markdown and list
@@ -93,6 +98,7 @@ tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_
       
     })
     
+    
     observeEvent(strat_layers,{
       
       output$text6 <- renderText({
@@ -102,7 +108,6 @@ tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_
          })
     
       output$download_sample <- downloadHandler(
-        
         
         filename = function() {
           paste("Stichprobe", Sys.Date(), ".RData", sep = "")
@@ -149,7 +154,30 @@ tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_
           save(my_list, file = file)
         }
       )
+
+                          
+    observeEvent(input$sample_button, {
+      req(strat_layers$data, nrow(strata()) > 1)
+      args <- list(
+        data = strat_layers$data,
+        strata_sizes = strata()[, "Größe Stichprobe"])
+      
+      strat_names <- lapply(strat_layers$ids, function(id){
+        names(strat_layers$sel_params[[id]])
+      })
+      
+      names(strat_names) <- strat_layers$columns
+      args <- c(args, strat_names)
+      smpl <- do.call(strat_sample, args)
+      sample(smpl)
     })
+    
+    
+    output$sample_table <- renderDT({
+      datatable(sample())
+    })
+    
+    
   })
 }
 
