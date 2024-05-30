@@ -128,7 +128,7 @@ tab4server <- function(id, data) {
         strat_layers$cols_categorized[[id]] <- select_groups(
           dataset()[[column_name]], categories, NA)
       } else {
-        breaks <- c(lapply(categories, function(category) category[[1]]), Inf)
+        breaks <- c(0, categories)
         strat_layers$cols_categorized[[id]] <- cut(
           dataset()[[column_name]],
           breaks = breaks, right = FALSE, include.lowest = TRUE
