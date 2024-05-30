@@ -179,6 +179,7 @@ tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_
     
     
   })
+  })
 }
 
 

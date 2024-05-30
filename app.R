@@ -58,10 +58,10 @@ server <- function(input, output, session) {
   uploaded_data <- tab1server("tab1")
   tab2server("tab2", data = uploaded_data$uploaded_data, 
                                map_file = uploaded_data$map_file)
-  tab2_1server("tab2_1", old = uploaded_data$old_sample, data = uploaded_dat$uploaded_data)
+  tab2_1server("tab2_1", old = uploaded_data$old_sample, data = uploaded_data$uploaded_data)
   
-  filtered_data <- tab3server("tab3", data = uploaded_data$uploaded_data)
-  strat_layers <- tab4server("tab4", data = filtered_data)
+  filtered <- tab3server("tab3", data = uploaded_data$uploaded_data)
+  strat_layers <- tab4server("tab4", data = filtered$filtered_data)
   strata <- tab5server("tab5", strat_layers = strat_layers)
   tab6server("tab6", data = uploaded_data1, name = uploaded_data$the_name, strat_layers = strat_layers, strata = my_strata$strata, 
              sample_size = my_strata$sample_size, name_other = uploaded_data$name_other, 

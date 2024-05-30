@@ -158,6 +158,6 @@ tab5server <- function(id, strat_layers) {
     })
    
     
-    return(list(strata = display_strata, sample_size = sample_size)
+    return(list(strata = display_strata, sample_size = sample_size))
   })
 }
