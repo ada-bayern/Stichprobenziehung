@@ -57,8 +57,8 @@ server <- function(input, output, session) {
                                map_file = uploaded_data$map_file)
   filtered_data <- tab3server("tab3", data = uploaded_data$uploaded_data)
   strat_layers <- tab4server("tab4", data = filtered_data)
-  tab5server("tab5", strat_layers = strat_layers)
-  tab6server("tab6")
+  strata <- tab5server("tab5", strat_layers = strat_layers)
+  tab6server("tab6", strata = strata, strat_layers = strat_layers)
   
 }
 

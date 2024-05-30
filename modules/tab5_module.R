@@ -155,6 +155,8 @@ tab5server <- function(id, strat_layers) {
       str[row, col] <- input$strata_cell_edit$value
       display_strata(str)
     })
-    
+   
+    return(display_strata)
+     
   })
 }
