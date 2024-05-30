@@ -1,24 +1,30 @@
 source("modules/selection_probability_module.R")
 source(file.path("../aktenstichprobe/R", "strata_sizes.R"))
+
+library(DT)
+
+
 # Define UI
 tab5ui <- function(id){
   ns <- NS(id)
-  # Defining the layout elements. Action button to add new stratification layers
-  # adds button for each layer. These buttons are tied to dynamically generated
-  # layouts for defining stratification layers
-  # In main panel, a crosstable of strata can be displayed.
+  
+  # Defining layout elements.Sidebar allows defining parameter for selection
+  # probabilities. Main panel displays editable crosstable
   fluidPage(
-    titlePanel("stichprobenziehung definieren"),
-    mainPanel(
-      uiOutput(ns("crosstab_columns")),
-      tableOutput(ns("crosstable")),
-      fluidRow(
-        # Text input for sample size
-        column(2, numericInput(ns("sample_size"), "Stichprobengröße", value = 100, min = 1, max = 99999, width = "80px")),
+    titlePanel("Stichprobenziehung definieren"),
+    sidebarLayout(
+      sidebarPanel(
+        numericInput(ns("sample_size"), "Stichprobengröße", value = 100, min = 1, max = 99999, width = "80px"),
         # Tabset for defining sampling probabilities
         uiOutput(ns("define_selection_probs_ui"))
       ),
-      tableOutput(ns("strata"))
+      mainPanel(
+        radioButtons(ns("strat_table_select"), 
+                     label = "Art der Stichprobenberechnung",
+                     choiceNames = c("Stichprobengröße garantiert", "Kategoriengrößen garantiert"),
+                     choiceValues = c("sample_size", "category_size")),
+        DTOutput(ns("strata"))
+      )
     )
   )
 }
@@ -35,6 +41,7 @@ tab5server <- function(id, strat_layers) {
     
     # table of computed strata sizes (computed based on inputs)
     strata <- reactiveVal(NULL)
+    display_strata <- reactiveVal(data.frame(Hinweis = "Bitte alle Parameter eingeben, um Kreuztabelle zu erstellen."))
     
     # sample size (computed based on user input)
     sample_size <- reactiveVal(NULL)
@@ -78,8 +85,6 @@ tab5server <- function(id, strat_layers) {
             strat_layers$sel_params[[layer_id]] = ret$vec
           })
         })
-        
-        
       }
     }, priority = 1)
     
@@ -107,13 +112,49 @@ tab5server <- function(id, strat_layers) {
     priority = 0)
     
     
-    # rendering the calculated strata sizes
-    output$strata <- renderTable({
-      strata()
-    }
-    )
+    # Creating the crosstable to render, which entails selecting relevant columns
+    # and renaming columns to German
+    observe({
+      req(strata())
+      strt <- strata()
+      
+      if (input$strat_table_select == "sample_size"){
+        cols <- c("Stratum", "Size.Population", "Ratio.Population", 
+                         "Size.MD", "Selection.Probability.MD")
+      } else {
+        cols <- c("Stratum", "Size.Population", "Ratio.Population", 
+                  "Size.LP", "Selection.Probability.LP")
+      }
+      
+      strt <- strt[, cols]
+      colnames(strt) <- c("Stratum", "Größe in Grundgesamtheit", "Anteil Grundgesamtheit",
+                          "Größe Stichprobe", "Auswahlwahrscheinlichkeit")
+      display_strata(strt)
+    })
     
+    
+    # rendering the calculated strata sizes
+    output$strata <- renderDT({
+      
+      options <- if (!is.null(strata()) && nrow(strata()) > 10) 
+        list(dom = "ltpr", lengthMenu = c(10, 15, 20), pageLength = 10) else
+        list(dom = "ltr")
+      
+      datatable(display_strata(), 
+                class = "cell-border stripe", 
+                editable = TRUE,
+                options = options)
+    })
+    
+    
+    # persisting table edits
+    observeEvent(input$strata_cell_edit, {
+      row <- input$strata_cell_edit$row
+      col <- input$strata_cell_edit$col
+      str <- display_strata
+      str[row, col] <- input$strata_cell_edit$value
+      display_strata(str)
+    })
     
   })
-  
 }
