@@ -28,7 +28,7 @@ define_layer_ui_1 <- function(id, old_sample, index) {
       #selectInput(ns("column_select"), "Spalte auswählen:", choices = col_options$columns[[index]]),
       # This could also be recognized automatically
       radioButtons(ns("data_type"), "Ausgewählter Datentyp:",
-                   choices = c("Numerisch", "Kategorisch", "categorical"),
+                   choices = c("Numerisch", "Kategorisch"),
                    selected = old_sample$data_types[[index]]),
       #numericInput(ns("num_categories"), "Anzahl der Kategorien", value = 2, min = 2, step = 1),
       uiOutput(ns("def_categories_ui")),

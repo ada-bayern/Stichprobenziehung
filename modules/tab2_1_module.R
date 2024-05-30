@@ -46,6 +46,23 @@ tab2_1ui <- function(id){
         uiOutput(ns("crosstab_columns_1")),
         tableOutput(ns("crosstable_1"))
       )
+    ),
+    fluidRow(
+      br(),
+      tags$b("Hier sieht man die Wahrscheinlichkeiten der Schichten."),
+      br(),
+      br(),
+      mainPanel(
+        uiOutput(ns("crosstab_columns_2")),
+        tableOutput(ns("crosstable_2")),
+        fluidRow(
+          # Text input for sample size
+          column(2, numericInput(ns("sample_size"), "Stichprobengröße", value = 100, min = 1, max = 99999, width = "80px")),
+          # Tabset for defining sampling probabilities
+          uiOutput(ns("define_selection_probs_ui"))
+        ),
+        tableOutput(ns("strata"))
+      )
     )
   )
     
@@ -143,32 +160,6 @@ tab2_1server <- function(id, data, old) {
     ###########################################################################
     ######### tab 4
     
-    
-    # All the relevant information for stratification
-    # ids: character vector of layer ids (layer_1, layer_2, etc.)
-    # columns: named list with the names of columns selected for stratification.
-    #   The names correspond to ids 
-    # data_types: Named list indiating for each column whether the user has selected
-    #   categorical or numerical values ("categorical" or "numerical")
-    # categories: Named list of named lists of lists. The top-layer names correspond to layer_ids
-    #   Each top layer list element contains a named list in which the names define
-    #   a category name and each element is a list defining the category. 
-    # data: The computed data with only the selected columns and the applied 
-    #   categorizations
-    # sel_kind: Created here, but values are only inserted in tab 5. Named list
-    #   indicating for each column how the user defines the selection probabilities
-    #   or strata sizes in UI. ("proportional", "sample" or "population"). Names
-    #   correspond to layer_ids
-    # sel_params: Also computed in tab 5. The relevant parameters for specifying
-    #   strata sizes using the R package.
-    
-    # strat_layers <- reactiveValues(ids = c(), columns = list(), data_types = list(), 
-    #                                categories = list(), data = NULL,
-    #                                sel_kind = list(), sel_params = list())
-    
-    
-    # Adding a new stratification layer
-    
     observeEvent(old(), {
       # Create new UI for defining layer and adding it to list of tabs
       ns <- session$ns
@@ -179,18 +170,6 @@ tab2_1server <- function(id, data, old) {
                                      categories = old1$categories,
                                      sel_kind = old1$sel_kind, sel_params = old1$sel_params)
       
-      
-      #layer_id <- paste0("layer_", length(old_sample$ids) + 1)
-      
-      #column values which haven't been selected yet so no columns
-      # is selected for two stratification layers
-      #sc_vec <- as.character(old_sample$columns)
-      #unselected_cols <- setdiff(colnames(filtered_data()), sc_vec)
-      
-      # Creates a new tab for the tabsetpanel. This tab containts the UI
-      # to define a stratification layer. The defined parameters are defined
-      # and saved. Inserts tab into tabsetpanel
-      # TODO: More parameters besides the column name
       lapply(old_sample$ids, function(layer_1){
         
         new_def_layer_ui_1 <- tabPanel(old_sample$columns[layer_1],
@@ -203,37 +182,6 @@ tab2_1server <- function(id, data, old) {
         
       })
       
-      
-      
-      # observe({
-      #   old_sample$columns[[layer_id]] <- layer_define_output$name
-      #   old_sample$data_types[[layer_id]] <- layer_define_output$data_type
-      #   old_sample$categories[[layer_id]] <- layer_define_output$categories
-      # })
-    
-      #Shows the buttons on top
-      # Outputting strat layer buttons UI
-      # output$strat_layer_buttons_ui_1 <- renderUI({
-      #   ns <- session$ns
-      #   lapply(old_sample$ids, function(button_id) {
-      #     column_name <- old_sample$columns[[old_sample$ids]]
-      #     actionButton(inputId = ns(paste0("button_", button_id)), label = column_name)
-      #   })
-      # })
-      
-      # Event handler for strat layer button click. Switches to the corresponding 
-      # tab in the hidden tabset
-      # observeEvent(old_sample$ids, {
-      #   ns <- session$ns
-      #   lapply(old_sample$ids, function(layer_id){
-      #     button_id <- paste0("button_", layer_id)
-      #     observeEvent(input[[button_id]], {
-      #       updateTabsetPanel(inputId = "strata_rename_input_ui_1", selected = ns(paste0("panel_def_", layer_id)))
-      #   })
-      # })
-      # })
-      
-#working###############################################################################        
       # Applies the categorization to the data and saves a data frame of only the 
       # selected columns with the created categories
       #observe({
@@ -271,7 +219,6 @@ tab2_1server <- function(id, data, old) {
       })
       
       # Creating crosstable of chosen row. 
-      # TODO: actually base this on all rows for which there is a strat layer
       output$crosstable_1 <- renderTable({
         #req(input$ct_column_one, input$ct_column_two, old_sample$data)
         data <- old_sample$data
@@ -285,15 +232,13 @@ tab2_1server <- function(id, data, old) {
       
     })
     
-    ############################################################################
-    
     ###########################################################################
     ######### end tab 4
     
     #h##########################################################################
     ######### tab 5 
-    # 
-    # 
+
+
     # # table of computed strata sizes (computed based on inputs)
     # strata <- reactiveVal(NULL)
     # 
@@ -302,7 +247,7 @@ tab2_1server <- function(id, data, old) {
     # 
     # observeEvent(input$sample_size, {
     #   sample_size(input$sample_size)
-    #   
+    # 
     # })
     # 
     # 
@@ -339,12 +284,12 @@ tab2_1server <- function(id, data, old) {
     #       strat_layers$sel_kind[[layer_id]] = ret$kind
     #       strat_layers$sel_params[[layer_id]] = ret$vec
     #     })
-    #     
+    # 
     #   }
     # })
     # 
     # 
-    # # Gathering the inputs for stratification size computation via package and 
+    # # Gathering the inputs for stratification size computation via package and
     # # putting inputs into named list for function call with do.call()
     # observe({
     #   req(strat_layers$data, sample_size(), unlist(strat_layers$sel_kind))
@@ -357,7 +302,7 @@ tab2_1server <- function(id, data, old) {
     #   ratios <- lapply(strat_layers$ids, function(id){
     #     strat_layers$sel_params[[id]]
     #   })
-    #   
+    # 
     #   names(ratios) <- strat_layers$columns
     #   args <- c(args, ratios)
     #   str <- do.call(strata_sizes, args)
@@ -372,7 +317,5 @@ tab2_1server <- function(id, data, old) {
     # )
     ###########################################################################
     ######### end tab 5
-    
-    #return(dataset)
   })
 }
