@@ -71,7 +71,8 @@ server <- function(input, output, session) {
              sample_size = ret_tab5$sample_size, 
              selected_column = ret_tab3$selected_column, 
              selected_values = ret_tab3$selected_values,
-             value_choices = ret_tab3$value_choices)
+             value_choices = ret_tab3$value_choices,
+             uploaded_data = ret_tab1$uploaded_data)
 }
 
 shinyApp(ui, server)

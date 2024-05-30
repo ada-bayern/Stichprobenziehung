@@ -15,7 +15,10 @@ tab6ui <- function(id){
               Diese besteht aus zwei Versionen: Eine enthält die kompletten Meta-Daten und die zweite Version besteht nur 
               aus den Akten, die auch ausgewählt wurden. ",
       br(),
+      br(),
+      br(),
       actionButton(ns("sample_button"), "Stichprobe ziehen"),
+      br(),
       DTOutput(ns("sample_table"))),
     sidebarPanel(
       actionButton(ns("create_rmd"), "Erstellen der Dokumentation"),
@@ -31,7 +34,7 @@ tab6ui <- function(id){
 
 
 tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_size,
-                       selected_column, selected_values, value_choices) {
+                       selected_column, selected_values, value_choices, uploaded_data) {
   moduleServer(id, function(input, output, session) {
     
     sample <- reactiveVal(NULL)
@@ -163,6 +166,7 @@ tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_
       names(strat_names) <- strat_layers$columns
       args <- c(args, strat_names)
       smpl <- do.call(strat_sample, args)
+      smpl <- uploaded_data()[rownames(smpl),]
       sample(smpl)
     })
     

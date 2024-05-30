@@ -17,7 +17,6 @@ selection_probability_server <- function(id, vals) {
     
     ns <- session$ns
     selection_params <- reactiveValues(kind = NULL, vec = list())
-    
     values <- reactiveVal(na.omit(vals))
     
     output$sp_inputs <- renderUI({
@@ -71,7 +70,8 @@ selection_probability_server <- function(id, vals) {
       }
       if(input$sp_kind == "Proportional") {
         selection_params$kind <- "proportional"
-        ratios <- c()
+        ratios <- rep(NA, length(values()))
+        names(ratios) <- values()
       }
       
       selection_params$vec <- ratios
