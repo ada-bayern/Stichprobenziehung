@@ -21,12 +21,17 @@ tab6ui <- function(id){
       actionButton(ns("create_rmd"), "Erstellen der Dokumentation"),
       br(), 
       br(),
-      downloadButton(ns("download_report"), "Dokumentation herunterladen")
+      downloadButton(ns("download_report"), "Dokumentation herunterladen"), 
+      br(), 
+      br(),
+      downloadButton(ns("download_sample"), "Stichproben Informationen herunterladen")
     )
   )
 }
 
-tab6server <- function(id, strata, strat_layers) {
+
+tab6server <- function(id, data, name, name_other, strat_layers, strata, sample_size,
+                       selected_column, selected_values, value_choices) {
   moduleServer(id, function(input, output, session) {
     
     sample <- reactiveVal(NULL)
@@ -35,22 +40,38 @@ tab6server <- function(id, strata, strat_layers) {
     #### Create R-Markdown and list
     ###############################################################################
     observeEvent(input$create_rmd, {
-      myJahr <- 2019 #connect with tab 1
+    
       fs::file_create("Dokumentation_Stichprobe.Rmd")
       fileConn <- file("Dokumentation_Stichprobe.Rmd")
       writeLines(
         c(
           "---",
           #"title: Dokumentation der Stichprobe",
-          paste("title: Dokumentation der Stichprobe", myJahr),
-          "output: pdf_document",
+          "title: Dokumentation der Stichprobe",
+          "date: Erstellt am `r format(Sys.Date(), '%d.%m.%Y')`",
+          "author: '`r name()`'",
+          "lang: de",
+          "toc: true",
+          "toc_depth: 1",
+          #"highlight: tango",
+          "output:",
+          "pdf_document:",
+          "df_print: kable",
           "---",
           "",
-          "### Hier sieht man einen Einblick in den geladenen Datensatz",
-          "```{r}",
-          #"head(my_akten())",
+          "```{r echo=FALSE}",
+          "name()",
           "```",
-          "Hier sind alle gewählten Variablen für die Stichprobenziehung"
+          "## Informationen zum verwendeten Datensatz",
+          "### Hier sieht man einen Einblick in den geladenen Datensatz",
+          "```{r echo=FALSE}",
+          "head(data())",
+          "```",
+          "## Diese Spalte/n wurde/n bearbeitet um die Grundgesamtheit zu bestimmen.",
+          "```{r echo=FALSE}",
+          #"selected_column()",
+          "```",
+          "In "
         ),
         fileConn
       )
@@ -78,6 +99,63 @@ tab6server <- function(id, strata, strat_layers) {
     })
     
     
+    observeEvent(strat_layers,{
+      
+      output$text6 <- renderText({
+           #paste(strat_layers)
+          paste(reactiveValuesToList(strat_layers))
+           #paste("Bitte klicken Sie eine der beliebigen Objekte an, um die Auswahl der letzten Stichprobe anzuzeigen.")
+         })
+    
+      output$download_sample <- downloadHandler(
+        
+        filename = function() {
+          paste("Stichprobe", Sys.Date(), ".RData", sep = "")
+        },
+        content = function(file) {
+          
+          #my_list <- reactiveValuesToList(strat_layers)
+          selected_values <- selected_values()
+          exists_1 <- any(sapply(selected_values, function(x) x == "Alle auswählen")) 
+          if (exists_1){
+            selected_values <- selected_values[-1]
+          }
+          
+          value_choices <- value_choices()
+          exists_2 <- any(sapply(value_choices, function(x) x == "Alle auswählen")) 
+          if (exists_2){
+            value_choices <- value_choices[-1]
+          }
+          
+          data_type <- reactiveValuesToList(strat_layers)$data_types
+          
+          for(i in 1:length(data_type)){
+            if(data_type[i] == "categorical"){
+              data_type[i] <- "Kategorisch"
+            } else if(data_type[i] == "continuous"){
+              data_type[i] <- "Numerisch"
+            }
+          }
+            
+          my_list <- list(
+            selected_column = selected_column(),
+            selected_values = selected_values, 
+            value_choices = value_choices, 
+            ids = reactiveValuesToList(strat_layers)$ids,
+            columns = reactiveValuesToList(strat_layers)$columns,
+            data_types = data_type, #reactiveValuesToList(strat_layers)$data_types,
+            categories = reactiveValuesToList(strat_layers)$categories,
+            #data = reactiveValuesToList(strat_layers)$data,
+            sel_kind = reactiveValuesToList(strat_layers)$sel_kind,
+            sel_params = reactiveValuesToList(strat_layers)$sel_params,
+            strata = strata(),
+            sample_size = sample_size())
+          
+          save(my_list, file = file)
+        }
+      )
+
+                          
     observeEvent(input$sample_button, {
       req(strat_layers$data, nrow(strata()) > 1)
       args <- list(
@@ -102,7 +180,6 @@ tab6server <- function(id, strata, strat_layers) {
     
   })
 }
-
 
 
 

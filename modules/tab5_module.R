@@ -48,6 +48,7 @@ tab5server <- function(id, strat_layers) {
     
     observeEvent(input$sample_size, {
       sample_size(input$sample_size)
+      
     })
     
     
@@ -139,7 +140,7 @@ tab5server <- function(id, strat_layers) {
       options <- if (!is.null(strata()) && nrow(strata()) > 10) 
         list(dom = "ltpr", lengthMenu = c(10, 15, 20), pageLength = 10) else
         list(dom = "ltr")
-      
+        
       datatable(display_strata(), 
                 class = "cell-border stripe", 
                 editable = TRUE,
@@ -156,7 +157,7 @@ tab5server <- function(id, strat_layers) {
       display_strata(str)
     })
    
-    return(display_strata)
-     
+    
+    return(list(strata = display_strata, sample_size = sample_size)
   })
 }

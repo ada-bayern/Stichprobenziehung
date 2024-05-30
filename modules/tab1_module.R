@@ -23,8 +23,8 @@ tab1ui <- function(id) {
       ),
     sidebarPanel(
       h5("Diese Angaben werden in die Stichproben Dokumentation übernommen."),
-           textInput("the_name", "Bitte geben Sie hier Ihren Namen ein."),
-           textInput("name_other", "Bitte geben Sie hier das Jahr der Stichprobenziehung ein.")
+           textInput(ns("the_name"), "Bitte geben Sie hier Identifikation Informationen an."),
+           textInput(ns("name_other"), "Bitte geben Sie hier alle relevanten Informationen der Stichprobenziehung an. (z.B. Jahr, Aktentyp,...)")
            )
     ),
     br(),
@@ -48,8 +48,10 @@ tab1server <- function(id) {
     
     # Reactive value to store the uploaded dataframe
     uploaded_data <- reactiveVal(NULL)
+    old_sample <- reactiveVal(NULL)
+    ident_primary <- reactiveVal(NULL)
+    ident_secondary <- reactiveVal(NULL)
     map_file <- reactiveVal(NULL)
-    #old_sample <- reactiveVal(NULL)
     
     # Upload file
     observeEvent(input$file, {
@@ -76,10 +78,23 @@ tab1server <- function(id) {
     
     observeEvent(input$file3, {
       
-      # new_sample(read.csv(input$file3$datapath))
+      old_sample(readRDS(input$file3$datapath))
+      
     })
+    
+    observeEvent(input$the_name, {
+      ident_primary(input$the_name)
+      
+    })
+    
+    observeEvent(input$name_other, {
+      ident_secondary(input$name_other)
+      
+    })
+    
     # Return uploaded data
-    return(list(uploaded_data = uploaded_data, map_file = map_file))
+    return(list(uploaded_data = uploaded_data, map_file = map_file, old_sample = old_sample,
+               ident_primary = ident_primary, ident_secondary = ident_secondary))
     
   })
 }
