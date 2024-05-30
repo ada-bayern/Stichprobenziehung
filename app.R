@@ -54,7 +54,7 @@ server <- function(input, output, session) {
     paste("Current panel: ", input$tabset)
   })
   
- 
+
   ret_tab1 <- tab1server("tab1")
   tab2server("tab2", data = ret_tab1$uploaded_data, 
                                map_file = ret_tab1$map_file)
