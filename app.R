@@ -63,8 +63,8 @@ server <- function(input, output, session) {
   filtered <- tab3server("tab3", data = uploaded_data$uploaded_data)
   strat_layers <- tab4server("tab4", data = filtered$filtered_data)
   strata <- tab5server("tab5", strat_layers = strat_layers)
-  tab6server("tab6", data = uploaded_data1, name = uploaded_data$the_name, strat_layers = strat_layers, strata = my_strata$strata, 
-             sample_size = my_strata$sample_size, name_other = uploaded_data$name_other, 
+  tab6server("tab6", data = uploaded_data1, name = uploaded_data$the_name, strat_layers = strat_layers, strata = strata$strata, 
+             sample_size = strata$sample_size, name_other = uploaded_data$name_other, 
              selected_column = filtered$selected_column, selected_values = filtered$selected_values,
              value_choices = filtered$value_choices)
 }
