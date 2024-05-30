@@ -41,6 +41,7 @@ tab5server <- function(id, strat_layers) {
     
     observeEvent(input$sample_size, {
       sample_size(input$sample_size)
+      
     })
     
     
@@ -109,7 +110,7 @@ tab5server <- function(id, strat_layers) {
     }
     )
     
-    
+    return(list(strata = strata, sample_size = sample_size))
   })
   
 }

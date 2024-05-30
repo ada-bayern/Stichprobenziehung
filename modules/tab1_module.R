@@ -23,8 +23,8 @@ tab1ui <- function(id) {
       ),
     sidebarPanel(
       h5("Diese Angaben werden in die Stichproben Dokumentation übernommen."),
-           textInput("the_name", "Bitte geben Sie hier Ihren Namen ein."),
-           textInput("name_other", "Bitte geben Sie hier das Jahr der Stichprobenziehung ein.")
+           textInput(ns("the_name"), "Bitte geben Sie hier Identifikation Informationen an."),
+           textInput(ns("name_other"), "Bitte geben Sie hier alle relevanten Informationen der Stichprobenziehung an. (z.B. Jahr, Aktentyp,...)")
            )
     ),
     br(),
@@ -51,7 +51,10 @@ tab1server <- function(id) {
     my_akten <- reactiveVal(NULL)
     clean_akten <- reactiveVal(NULL)
     my_karte <- reactiveVal(NULL)
+    
     old_sample <- reactiveVal(NULL)
+    the_name <- reactiveVal(NULL)
+    name_other <- reactiveVal(NULL)
     
     # Upload file
     observeEvent(input$file, {
@@ -107,11 +110,25 @@ tab1server <- function(id) {
     
     observeEvent(input$file3, {
       
-      # new_sample(read.csv(input$file3$datapath))
+      old_sample(readRDS(input$file3$datapath))
+      
     })
+    
+    observeEvent(input$the_name, {
+      the_name(input$the_name)
+      
+    })
+    
+    observeEvent(input$name_other, {
+      name_other(input$name_other)
+      
+    })
+    
     # Return uploaded data
     return(list(clean_akten = clean_akten, my_karte = my_karte, 
-                my_akten = my_akten, uploaded_data = uploaded_data))
+                my_akten = my_akten, uploaded_data = uploaded_data, 
+                old_sample = old_sample, the_name = the_name, 
+                name_other = name_other))
     
   })
 }

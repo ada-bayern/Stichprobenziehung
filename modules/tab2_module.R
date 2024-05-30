@@ -93,11 +93,13 @@ tab2server <- function(id, data, karten, akten, clean) {
     my_akten <- reactiveVal(NULL)
     clean_akten <- reactiveVal(NULL)
     my_karte <- reactiveVal(NULL)
+    #old_sample <- reactiveVal(NULL)
     
     observeEvent(data(), {
       uploaded_data(data())
       clean_akten(clean())
       my_akten(akten())
+      
       
       #Introduction
       output$text_main <- renderText({
@@ -279,6 +281,10 @@ tab2server <- function(id, data, karten, akten, clean) {
           # })
 
     })
+    
+    # observeEvent(old(), {
+    #   old_sample(old())
+    # })
     
      # Return uploaded data
      return(clean_akten)

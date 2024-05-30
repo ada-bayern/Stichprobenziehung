@@ -14,9 +14,11 @@ library(ggplot2)
 library(shinythemes)
 library(tidyverse)
 library(sf)
+library(tinytex)
 
 source("modules/tab1_module.R")
 source("modules/tab2_module.R")
+source("modules/tab2_1_module.R")
 source("modules/tab3_module.R")
 source("modules/tab4_module.R")
 source("modules/tab5_module.R")
@@ -38,6 +40,7 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel("Startseite", tab1ui("tab1")),
     tabPanel("Daten kennenlernen", tab2ui("tab2")),
+    tabPanel("Alte Stichprobe einsehen", tab2_1ui("tab2_1")),
     tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
     tabPanel("Stichprobe festlegen", tab4ui("tab4")),
     tabPanel("Stichprobe definieren", tab5ui("tab5")),
@@ -56,10 +59,14 @@ server <- function(input, output, session) {
   uploaded_data1 <- tab2server("tab2", data = uploaded_data$uploaded_data, 
                                karten = uploaded_data$my_karte, akten = uploaded_data$my_akten,
                                clean = uploaded_data$clean_akten)
-  filtered_data <- tab3server("tab3", data = uploaded_data1)
-  strat_layers <- tab4server("tab4", data = filtered_data)
-  tab5server("tab5", strat_layers = strat_layers)
-  tab6server("tab6")
+  tab2_1server("tab2_1", old = uploaded_data$old_sample, data = uploaded_data1)
+  filtered <- tab3server("tab3", data = uploaded_data1)
+  strat_layers <- tab4server("tab4", data = filtered$filtered_data)
+  my_strata <- tab5server("tab5", strat_layers = strat_layers)
+  tab6server("tab6", data = uploaded_data1, name = uploaded_data$the_name, strat_layers = strat_layers, strata = my_strata$strata, 
+             sample_size = my_strata$sample_size, name_other = uploaded_data$name_other, 
+             selected_column = filtered$selected_column, selected_values = filtered$selected_values,
+             value_choices = filtered$value_choices)
   
 }
 
