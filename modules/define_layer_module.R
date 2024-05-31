@@ -57,9 +57,20 @@ define_layer_server <- function(id, dataset) {
       selected_column$name <- input$column_select
     })
     
+    
+    observeEvent(selected_column$name, {
+      if (all(is.numeric(dataset()[[input$column_select]]) | is.na(dataset()[[input$column_select]]))){
+        updateRadioButtons(inputId = "data_type", selected = "Numerisch")
+      } else {
+        updateRadioButtons(inputId = "data_type", selected = "Kategorisch")
+      }
+    })
+    
+    
     observeEvent(input$num_categories, {
       num_categories(input$num_categories)
     })
+    
     
     #also resetting category definitions when different data type is selected
     observeEvent(input$data_type, {
@@ -77,56 +88,69 @@ define_layer_server <- function(id, dataset) {
       input$column_select
     })
     
+    
     # Rendering the ui for defining categories
     output$def_categories_ui <- renderUI({
       
       if (selected_column$data_type == "categorical") {
         vals <- unique(dataset()[[selected_column$name]])
         
-        fluidRow(
-          column(6,
-            bucket_list(
-              header = NULL,
-              group_name = "bucket_list_group",
-              class = c("default-sortable", "bucket-left"),
-              add_rank_list(
-                text = "Werte in Spalte",
-                labels = vals,
-                input_id = ns("list_orignal_values")
-              )
+        if (length(vals) > 100 && all(is.numeric(dataset()[[selected_column$name]]))){
+          HTML("Mehr als 100 numerische Werte, bitten wählen Sie die Option Kategorisch.")
+        } else {
+          fluidRow(
+            column(6,
+                   bucket_list(
+                     header = NULL,
+                     group_name = "bucket_list_group",
+                     class = c("default-sortable", "bucket-left"),
+                     add_rank_list(
+                       text = "Werte in Spalte",
+                       labels = vals,
+                       input_id = ns("list_orignal_values")
+                     )
+                   )
+            ),
+            column(6,
+                   lapply(1:num_categories(), function(n){
+                     tagList(
+                       textInput(ns(paste0("name_cat_", n)),
+                                 label = NULL,
+                                 placeholder = paste("Kategorie", n)),
+                       bucket_list(
+                         header = NULL,
+                         group_name = "bucket_list_group",
+                         orientation = "vertical",
+                         class = c("default-sortable", "buckets-right"),
+                         add_rank_list(
+                           text = NULL,
+                           labels = NULL,
+                           input_id = ns(paste0("list_cat_", n))
+                         ),
+                       )
+                     )
+                   })
             )
-          ),
-          column(6,
-            lapply(1:num_categories(), function(n){
-              tagList(
-                textInput(ns(paste0("name_cat_", n)),
-                          label = NULL,
-                          placeholder = paste("Kategorie", n)),
-                bucket_list(
-                  header = NULL,
-                  group_name = "bucket_list_group",
-                  orientation = "vertical",
-                  class = c("default-sortable", "buckets-right"),
-                  add_rank_list(
-                    text = NULL,
-                    labels = NULL,
-                    input_id = ns(paste0("list_cat_", n))
-                  ),
-                )
-              )
-            })
           )
-        )
+        }
       }
       
       else{
-        list(
-          numericInput(ns(paste0("min_cat_", 1)), paste0("Kategorie 1", " von"), value = 0),
-          lapply(1:num_categories(), function(i) {
-              numericInput(ns(paste0("max_cat_", i)), paste0("Kategorie ", i, " bis"), value = 0)
-          }))
+        if (!all(is.numeric(dataset()[[selected_column$name]]))){
+         HTML("Diese Daten sind nicht numerisch, wählen sie die Option Kategorisch")
+        } else {
+          min <- min(dataset()[[selected_column$name]], na.rm = TRUE)
+          max <- max(dataset()[[selected_column$name]], na.rm = TRUE)
+          avg_dist <- (max - min) / num_categories()
+          list(
+            numericInput(ns(paste0("min_cat_", 1)), paste0("Kategorie 1", " von"), value = min),
+            lapply(1:num_categories(), function(i) {
+              numericInput(ns(paste0("max_cat_", i)), paste0("Kategorie ", i, " bis"), value = min + (i * avg_dist))
+            }))
+        }
       }
     })
+    
     
     # Update category definitions
     observeEvent(input$apply_button, {
@@ -155,7 +179,6 @@ define_layer_server <- function(id, dataset) {
     
     
     # Return name of selected column.
-    # TODO: return all collected information which define categories
     return(selected_column)
   })
   
