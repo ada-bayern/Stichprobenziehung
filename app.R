@@ -40,7 +40,7 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel("Startseite", tab1ui("tab1")),
     tabPanel("Daten kennenlernen", tab2ui("tab2")),
-    tabPanel("Alte Stichprobe einsehen", tab2_1ui("tab2_1")),
+    #tabPanel("Alte Stichprobe einsehen", tab2_1ui("tab2_1")),
     tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
     tabPanel("Stichprobe festlegen", tab4ui("tab4")),
     tabPanel("Stichprobe definieren", tab5ui("tab5")),
@@ -63,9 +63,9 @@ server <- function(input, output, session) {
   strat_layers <- tab4server("tab4", data = ret_tab3$filtered_data)
   ret_tab5 <- tab5server("tab5", strat_layers = strat_layers)
   tab6server("tab6", 
-             data = uploaded_data$uploaded_data, 
-             name = uploaded_data$ident_primary,
-             name_other = uploaded_data$ident_secondary,
+             data = ret_tab1$uploaded_data, 
+             ident_primary = ret_tab1$ident_primary,
+             ident_secondary = ret_tab1$ident_secondary,
              strat_layers = strat_layers, 
              strata = ret_tab5$strata, 
              sample_size = ret_tab5$sample_size, 
