@@ -5,23 +5,22 @@ define_layer_ui <- function(id, col_options) {
   ns <- NS(id)
   
   fluidPage(
-    tags$head(
-      # Note the wrapping of the string in HTML()
-      tags$style(HTML("
-      .buckets-right {
-        margin-top: -25px;
-        margin-left: -20px;
-        margin-bottom: -10px;
-        margin-right: -20px;
-        /* Adjust as needed */
+    tags$style(HTML("
+      .form-group {
+        margin-top: 0px;
+        margin-bottom: 5px;
       }
-      .bucket-left {
-        margin-top: -20px;
-        margin-left: -20px;
-        margin-right: -10px;
+      .default-sortable.rank-list-container {
+        margin: 0px;
       }
-      
-    "))
+      .default-sortable.bucket-list-container {
+        padding: 0px;
+        margin-left: 0px;
+        margin-right: 0px;
+        margin-top: 0px;
+        margin-bottom: 15px;
+      }
+    ")
     ),
     tagList(
       h4(textOutput(ns("column_name"))),
@@ -57,7 +56,7 @@ define_layer_server <- function(id, dataset) {
       selected_column$name <- input$column_select
     })
     
-    
+    # checking data type of values and updating selected data type
     observeEvent(selected_column$name, {
       if (all(is.numeric(dataset()[[input$column_select]]) | is.na(dataset()[[input$column_select]]))){
         updateRadioButtons(inputId = "data_type", selected = "Numerisch")
@@ -103,7 +102,7 @@ define_layer_server <- function(id, dataset) {
                    bucket_list(
                      header = NULL,
                      group_name = "bucket_list_group",
-                     class = c("default-sortable", "bucket-left"),
+                     class = c("default-sortable"),
                      add_rank_list(
                        text = "Werte in Spalte",
                        labels = vals,
@@ -115,13 +114,14 @@ define_layer_server <- function(id, dataset) {
                    lapply(1:num_categories(), function(n){
                      tagList(
                        textInput(ns(paste0("name_cat_", n)),
+                                 width = "100%",
                                  label = NULL,
                                  placeholder = paste("Kategorie", n)),
                        bucket_list(
                          header = NULL,
                          group_name = "bucket_list_group",
                          orientation = "vertical",
-                         class = c("default-sortable", "buckets-right"),
+                         class = c("default-sortable"),
                          add_rank_list(
                            text = NULL,
                            labels = NULL,
