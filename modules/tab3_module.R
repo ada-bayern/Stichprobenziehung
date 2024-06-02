@@ -1,3 +1,4 @@
+library(DT)
 
 # Define UI
 tab3ui <- function(id){
@@ -18,7 +19,8 @@ tab3ui <- function(id){
       ),
       mainPanel(
         textOutput(ns("pop_count")),
-        tableOutput(ns("filtered_table")),
+        DTOutput(ns("filtered_table"))
+        #tableOutput(ns("filtered_table")),
       )
     )
   )
@@ -35,13 +37,14 @@ tab3server <- function(id, data) {
     # values (like an id column) is selected for filtering
     max_choices = 100
     
-    # Saving the data uploaded in another tab and passes to this module.
-    #dataset <- reactiveVal(NULL)
-    #observeEvent(data(), {
-    #  dataset(data())
-    #})
+   
     # The filtered population
     filtered_data <- reactiveVal(NULL)
+    
+    observeEvent(data(), {
+      filtered_data(data())
+    })
+    
     
     # Defining the column and the column values by which to filter
     # selected_column: string of column selected for filtering
@@ -117,6 +120,7 @@ tab3server <- function(id, data) {
                                selected = to_select)
     }, ignoreNULL = FALSE)
     
+    
     # filters the population
     observe({
       req(data(), selected_column())
@@ -129,9 +133,12 @@ tab3server <- function(id, data) {
       paste("Zeilen insgesamt:", nrow(filtered_data()))
     })
     
+    
     # Showing the filtered table
-    output$filtered_table <- renderTable({
-      head(filtered_data(), 20)
+    output$filtered_table <- renderDT({
+      datatable(filtered_data(), 
+                class = "cell-border stripe", 
+                options = list(dom = "ltpr"))
     })
     
    
