@@ -42,7 +42,7 @@ ui <- fluidPage(
     tabPanel("Daten kennenlernen", tab2ui("tab2")),
     #tabPanel("Alte Stichprobe einsehen", tab2_1ui("tab2_1")),
     tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
-    tabPanel("Stichprobe festlegen", tab4ui("tab4")),
+    tabPanel("Kategorien erstellen", tab4ui("tab4")),
     tabPanel("Stichprobe definieren", tab5ui("tab5")),
     tabPanel("Stichprobe einsehen", tab6ui("tab6"))
   )

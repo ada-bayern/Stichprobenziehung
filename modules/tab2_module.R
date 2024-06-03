@@ -19,13 +19,13 @@ tab2ui <- function(id){
                 width = 300,
                 inputId = ns("chosen_data"),
                 label = "Bitte wählen Sie einen Datensatz aus, den Sie einsehen möchten",
-                choices = c("Metadaten der Akten", "Karten-Datensatz"),
-                selected = "Metadaten der Akten")),
+                choices = c("Daten", "Karten-Datensatz"),
+                selected = "Daten")),
     mainPanel(
       tags$b(textOutput(ns("text1"))),
       verbatimTextOutput(ns("summary")))),
     fluidRow(
-      sidebarPanel("Dieser Abschnitt zeigt die Statistiken der Akten-Datei"),
+      sidebarPanel("Dieser Abschnitt zeigt eine Zusammenfassung der Daten"),
       mainPanel(
         #tableOutput(ns("head")),
         br(),
@@ -107,7 +107,7 @@ tab2server <- function(id, data, map_file) {
       #   head(uploaded_data())
       # })
       output$summary <- renderPrint({
-        if (input$chosen_data == "Metadaten der Akten") {
+        if (input$chosen_data == "Daten") {
           summary(data())
         } else {
           summary(map_file())

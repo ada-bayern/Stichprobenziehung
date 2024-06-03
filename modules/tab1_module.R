@@ -7,7 +7,7 @@ tab1ui <- function(id) {
     br(),
     column(width = 8,
            tags$b("Allgemeine Informationen:"),
-              h5("Bitte laden Sie hier alle notwendigen Dateien hoch und geben alle wichtigen Informationen in die 
+              h5("Bitte laden Sie hier alle notwendigen Dateien hoch und geben Sie alle wichtigen Informationen in die 
                  vorgegebenen Textfelder ein. Alle Informationen, die Sie manuell eingeben, werden gespeichert und 
                  in die Dokumentation der Stichprobe übernommen. Diese können Sie in dem letzten Tab 'Stichprobe einsehen' herunterladen. Bitte beachten Sie, dass Sie die Tabs immer von links nach rechts bedienen und keine 
                  Tabs überspringen.")),
@@ -17,13 +17,13 @@ tab1ui <- function(id) {
     br(),
     fluidRow(
       sidebarPanel(
-        h5("Bitte laden Sie hier die Metadaten der Akten und die Kartendatei hoch."), 
-        fileInput(ns("file"), "Metadaten (CSV-Format, max. 160mb) ", buttonLabel = "Hochladen"),
+        h5("Bitte laden Sie hier die Daten und die Kartendatei hoch."), 
+        fileInput(ns("file"), "Daten (CSV-Format, max. 160mb) ", buttonLabel = "Hochladen"),
         fileInput(ns("file2"), "Kartendatei (RDS-Format)", buttonLabel = "Hochladen"),
       ),
     sidebarPanel(
       h5("Diese Angaben werden in die Stichproben Dokumentation übernommen."),
-           textInput(ns("the_name"), "Bitte geben Sie hier Identifikation Informationen an."),
+           textInput(ns("the_name"), "Bitte geben Sie hier eine Identifikation an."),
            textInput(ns("name_other"), "Bitte geben Sie hier alle relevanten Informationen der Stichprobenziehung an. (z.B. Jahr, Aktentyp,...)")
            )
     )

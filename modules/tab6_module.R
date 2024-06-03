@@ -12,8 +12,8 @@ tab6ui <- function(id){
       "Hier können Sie die Dokumentation der Stichprobenziehung herunterladen. 
               Alle Angaben, die Sie getätigt haben, wurden gesichert und werden in einer PDF-Datei 
               herausgegeben. Neben der Dokumentation können Sie auch die CSV-Dateien der Stichprobe herunterladen. 
-              Diese besteht aus zwei Versionen: Eine enthält die kompletten Meta-Daten und die zweite Version besteht nur 
-              aus den Akten, die auch ausgewählt wurden. ",
+              Diese besteht aus zwei Versionen: Eine enthält den kompletten Datensatz und die zweite Version besteht nur 
+              aus den Datenpunkten, die auch ausgewählt wurden. ",
       br(),
       br(),
       br(),
@@ -55,8 +55,8 @@ tab6server <- function(id, data, ident_primary, ident_secondary, name_other, str
           "date: Erstellt am `r format(Sys.Date(), '%d.%m.%Y')`",
           "author: '`r ident_primary()`'",
           "lang: de",
-          "toc: true",
-          "toc_depth: 1",
+          #"toc: true",
+          #"toc_depth: 1",
           #"highlight: tango",
           "output:",
           "pdf_document:",
@@ -68,11 +68,11 @@ tab6server <- function(id, data, ident_primary, ident_secondary, name_other, str
           "```{r}",
           "selected_column()",
           "```",
-          "## Diese Variablen standen zur Verfügung, um die Grundgesamtheit zu bestimmen.",
+          "## Diese Ausprägungen standen zur Verfügung, um die Grundgesamtheit zu bestimmen.",
           "```{r}",
           "value_choices()",
           "```",
-          "## Diese Variablen wurde ausgewählt, um die Grundgesamtheit zu bestimmen.",
+          "## Diese Ausprägungen wurde ausgewählt, um die Grundgesamtheit zu bestimmen.",
           "```{r}",
           "selected_values()",
           "```",

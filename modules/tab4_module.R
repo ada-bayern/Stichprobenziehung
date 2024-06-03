@@ -13,7 +13,7 @@ tab4ui <- function(id){
   # layouts for defining stratification layers
   # In main panel, a crosstable of strata can be displayed.
   fluidPage(
-    titlePanel("Stichprobenziehung definieren"),
+    titlePanel("Variablen auswählen und Kategorien erstellen"),
     sidebarLayout(
       mainPanel(
         uiOutput(ns("strat_layer_buttons_ui")),
