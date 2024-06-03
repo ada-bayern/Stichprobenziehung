@@ -14,7 +14,14 @@ tab5ui <- function(id){
     titlePanel("Stichprobenziehung definieren"),
     sidebarLayout(
       sidebarPanel(
-        numericInput(ns("sample_size"), "Stichprobengröße", value = 100, min = 1, max = 99999, width = "80px"),
+        fluidRow(
+          column(6, numericInput(ns("sample_size"), "Stichprobengröße", value = 100, min = 1, max = 99999, width = "80px")),
+          column(6, align = "center",
+                 br(),
+                 textOutput(ns("realized_sample_size"))
+          )
+        ),
+        br(),
         # Tabset for defining sampling probabilities
         uiOutput(ns("define_selection_probs_ui"))
       ),
@@ -45,6 +52,7 @@ tab5server <- function(id, strat_layers) {
     
     # sample size (computed based on user input)
     sample_size <- reactiveVal(NULL)
+    realized_sample_size <- reactiveVal(NULL)
     
     observeEvent(input$sample_size, {
       sample_size(input$sample_size)
@@ -98,6 +106,7 @@ tab5server <- function(id, strat_layers) {
       args <- list(
         x = strat_layers$data,
         sample_size = sample_size(),
+        strat_min = 3,
         strat_names = unlist(colnames(strat_layers$data)),
         ratio_types = unlist(strat_layers$sel_kind)
       )
@@ -130,6 +139,8 @@ tab5server <- function(id, strat_layers) {
       strt <- strt[, cols]
       colnames(strt) <- c("Stratum", "Größe in Grundgesamtheit", "Anteil Grundgesamtheit",
                           "Größe Stichprobe", "Auswahlwahrscheinlichkeit")
+      rss <- sum(strt$`Größe Stichprobe`)
+      realized_sample_size(rss)
       display_strata(strt)
     })
     
@@ -145,6 +156,10 @@ tab5server <- function(id, strat_layers) {
                 class = "cell-border stripe", 
                 editable = TRUE,
                 options = options)
+    })
+    
+    output$realized_sample_size <- renderText({
+      paste("Realisierte Stichprobengröße:", realized_sample_size())
     })
     
     
