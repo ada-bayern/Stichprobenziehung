@@ -1,4 +1,5 @@
 #library(rmarkdown)
+library(DT)
 
 # Define UI
 tab2ui <- function(id){
@@ -29,7 +30,8 @@ tab2ui <- function(id){
         #tableOutput(ns("head")),
         br(),
         tags$b(textOutput(ns("text2"))),
-        tableOutput(ns("head.akten")),
+        #tableOutput(ns("head.akten")),
+        DTOutput(ns("head.akten")),
         br(),
         tags$b(textOutput(ns("text3"))),
         br(),
@@ -116,8 +118,10 @@ tab2server <- function(id, data, map_file) {
         "Diese Tabelle zeigt die sechs ersten Reihen des hochgeladenen Datensatzes."
       })
       
-      output$head.akten <- renderTable({
-        head(data())
+      output$head.akten <- renderDT({
+        datatable(head(data()), 
+                  class = "cell-border stripe", 
+                  options = list(dom = "t"))
       })
       
         # output$summary1 <- renderPrint({
