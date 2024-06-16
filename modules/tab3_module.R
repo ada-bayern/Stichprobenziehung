@@ -13,7 +13,9 @@ tab3ui <- function(id){
         conditionalPanel(
           condition = "input.filter_dropdown % 2 != 0",
           ns = ns,
+          actionButton(ns("update_button"), "Auswahl übernehmen", icon = icon("refresh")),
           uiOutput(ns("column_dropdown")),
+          textOutput(ns("text6")),
           checkboxGroupInput(ns("value_dropdown"), label = NULL, choices = c())
         )
       ),
@@ -27,7 +29,7 @@ tab3ui <- function(id){
 }
 
 # Define server logic
-tab3server <- function(id, data) {
+tab3server <- function(id, data, old) {
   moduleServer(id, function(input, output, session) {
     
     ns <- session$ns
@@ -37,14 +39,8 @@ tab3server <- function(id, data) {
     # values (like an id column) is selected for filtering
     max_choices = 100
     
-   
     # The filtered population
     filtered_data <- reactiveVal(NULL)
-    
-    observeEvent(data(), {
-      filtered_data(data())
-    })
-    
     
     # Defining the column and the column values by which to filter
     # selected_column: string of column selected for filtering
@@ -53,7 +49,21 @@ tab3server <- function(id, data) {
     selected_column <- reactiveVal(NULL)
     selected_values <- reactiveVal(NULL)
     value_choices <- reactiveVal(NULL)
-  
+    
+    observeEvent(data(), {
+      filtered_data(data())
+    })
+    
+    observeEvent(old(), {
+      if (is.null(old())) {
+        showNotification("Alte Stichprobe wurde nicht hochgeladen", type = "message")
+      } else {
+        showNotification("Alte Stichprobe wurde erfolgreich hochgeladen", type = "message")
+      }
+    })
+    
+    
+##################
     # renders select input based on column names in dataset
     output$column_dropdown <- renderUI({
       selectInput(ns("column_dropdown"), label = "Spalte zum Filtern auswählen",
@@ -141,6 +151,100 @@ tab3server <- function(id, data) {
                 options = list(dom = "ltpr"))
     })
     
+    ###############################################################################
+    ##default
+    observeEvent(!is.null(old()), {
+
+      old_sample <- old()
+
+      selected_column(old_sample[["selected_column"]])
+      selected_values(old_sample[["selected_values"]])
+      value_choices(old_sample[["value_choices"]])
+
+      # renders select input based on column names in dataset
+      output$column_dropdown <- renderUI({
+        selectInput(ns("column_dropdown"), label = "Diese Spalte wurde zum filtern ausgewählt",
+                    choices = colnames(data()), selected = selected_column())
+      })
+
+      observeEvent(input$column_dropdown, {
+      selected_values(old_sample[["selected_values"]])
+      to_select_1 = selected_values()
+      updateCheckboxGroupInput(session, "value_dropdown",
+                               selected = to_select_1)#old_sample[["selected_values"]])
+      })
+
+      # filters the population
+      observe({
+        req(data(), selected_column())
+        filtered_data(subset(data(), data()[[selected_column()]] %in% selected_values()))
+      })
+
+
+      # displays number of rows in filtered data
+      output$pop_count <- renderText({
+        paste("Zeilen insgesamt:", nrow(filtered_data()))
+      })
+
+
+      # Showing the filtered table
+      output$filtered_table <- renderDT({
+        datatable(filtered_data(),
+                  class = "cell-border stripe",
+                  options = list(dom = "ltpr"))
+      })
+
+      observeEvent(input$update_button, {
+
+      selected_column(old_sample[["selected_column"]])
+      selected_values(old_sample[["selected_values"]])
+      #value_choices(old_sample[["value_choices"]])
+
+      # renders select input based on column names in dataset
+      output$column_dropdown <- renderUI({
+        selectInput(ns("column_dropdown"), label = "Diese Spalte wurde zum filtern ausgewählt",
+                    choices = colnames(data()), selected = selected_column())
+      })
+
+      observeEvent(input$column_dropdown, {
+        selected_values(old_sample[["selected_values"]])
+        to_select_1 = selected_values()
+        updateCheckboxGroupInput(session, "value_dropdown",
+                                 selected = to_select_1)#old_sample[["selected_values"]])
+      })
+
+
+      # filters the population
+      observe({
+        req(data(), selected_column())
+        filtered_data(subset(data(), data()[[selected_column()]] %in% selected_values()))
+      })
+
+
+      # displays number of rows in filtered data
+      output$pop_count <- renderText({
+        paste("Zeilen insgesamt:", nrow(filtered_data()))
+      })
+
+
+      # Showing the filtered table
+      output$filtered_table <- renderDT({
+        datatable(filtered_data(),
+                  class = "cell-border stripe",
+                  options = list(dom = "ltpr"))
+      })
+      })
+
+    }, ignoreNULL = TRUE)
+    
+    observeEvent(is.null(old()), {
+      observeEvent(input$update_button,{
+        showNotification("Es wurde keine alte Stichprobe hochgeladen!", type = "error")
+      })
+    })
+    
+    ##default
+    ################################################################################
    
     # return filtered data
     return(list(filtered_data = filtered_data,  selected_column = selected_column,

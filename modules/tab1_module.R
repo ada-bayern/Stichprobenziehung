@@ -27,20 +27,20 @@ tab1ui <- function(id) {
            textInput(ns("name_other"), "Bitte geben Sie hier alle relevanten Informationen der Stichprobenziehung an. (z.B. Jahr, Aktentyp,...)")
            )
     )
-    # ,
-    # br(),
-    # tags$b("ODER sehen Sie eine bisher gezogene Stichprobe ein:"),
-    # br(),
-    # br(),
-    # fluidRow(
-    #   sidebarPanel(
-    #     h5("Hier können Sie Ihre vorherig gezogene Stichprobe hochladen und alle deskriptiven Statistiken 
-    #        und Informationen einsehen. Laden Sie hierfür die ...Datei hoch, die Sie bei der Stichprobe neben der Dokumentation und 
-    #        CSV-Datei herunterladen haben."), 
-    #     fileInput(ns("file3"), "Stichprobendatei", buttonLabel = "Hochladen")
-    #   )
-    #   
-    # )
+    ,
+    br(),
+    tags$b("OPTIONAL: Laden Sie eine bisher gezogene Stichprobe hoch:"),
+    br(),
+    br(),
+    fluidRow(
+      sidebarPanel(
+        h5("Hier können Sie Ihre vorherig gezogene Stichprobe hochladen und diese als default Werte für Ihre neue Stichprobe nutzen.
+        Laden Sie hierfür die RData-Datei hoch, die Sie bei der Stichprobe neben der Dokumentation und
+           CSV-Datei herunterladen haben."),
+        fileInput(ns("file3"), "Stichprobendatei", buttonLabel = "Hochladen")
+      )
+
+    )
   )
 }
 

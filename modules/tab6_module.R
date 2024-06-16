@@ -137,18 +137,18 @@ tab6server <- function(id, data, ident_primary, ident_secondary, name_other, str
     
     output$download_sample <- downloadHandler(
       filename = function() {
-        paste("Stichprobe", Sys.Date(), ".RData", sep = "")
+        paste("Stichprobe", Sys.Date(), ".rds", sep = "")
       },
       content = function(file) {
-        #my_list <- reactiveValuesToList(strat_layers)
+        # my_list <- reactiveValuesToList(strat_layers)
         selected_values <- selected_values()
-        exists_1 <- any(sapply(selected_values, function(x) x == "Alle auswählen")) 
+        exists_1 <- any(sapply(selected_values, function(x) x == "Alle auswählen"))
         if (exists_1){
           selected_values <- selected_values[-1]
         }
-          
+
         value_choices <- value_choices()
-        exists_2 <- any(sapply(value_choices, function(x) x == "Alle auswählen")) 
+        exists_2 <- any(sapply(value_choices, function(x) x == "Alle auswählen"))
         if (exists_2){
           value_choices <- value_choices[-1]
         }
@@ -176,7 +176,7 @@ tab6server <- function(id, data, ident_primary, ident_secondary, name_other, str
           strata = strata(),
           sample_size = sample_size())
           
-        save(my_list, file = file)
+        saveRDS(my_list, file = file)
       }
     )
 
