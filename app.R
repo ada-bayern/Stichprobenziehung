@@ -18,7 +18,7 @@ library(tinytex)
 
 source("modules/tab1_module.R")
 source("modules/tab2_module.R")
-source("modules/tab2_1_module.R")
+#source("modules/tab2_1_module.R")
 source("modules/tab3_module.R")
 source("modules/tab4_module.R")
 source("modules/tab5_module.R")
@@ -58,8 +58,8 @@ server <- function(input, output, session) {
   ret_tab1 <- tab1server("tab1")
   tab2server("tab2", data = ret_tab1$uploaded_data, 
                                map_file = ret_tab1$map_file)
-  tab2_1server("tab2_1", old = ret_tab1$old_sample, data = ret_tab1$uploaded_data)
-  ret_tab3 <- tab3server("tab3", data = ret_tab1$uploaded_data)
+  #tab2_1server("tab2_1", old = ret_tab1$old_sample, data = ret_tab1$uploaded_data)
+  ret_tab3 <- tab3server("tab3", data = ret_tab1$uploaded_data, old = ret_tab1$old_sample)
   strat_layers <- tab4server("tab4", data = ret_tab3$filtered_data)
   ret_tab5 <- tab5server("tab5", strat_layers = strat_layers)
   tab6server("tab6", 
