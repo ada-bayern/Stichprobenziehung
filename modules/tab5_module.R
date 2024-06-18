@@ -155,6 +155,7 @@ tab5server <- function(id, strat_layers) {
       datatable(display_strata(), 
                 class = "cell-border stripe", 
                 editable = TRUE,
+                rownames = FALSE,
                 options = options)
     })
     
@@ -167,7 +168,7 @@ tab5server <- function(id, strat_layers) {
     observeEvent(input$strata_cell_edit, {
       row <- input$strata_cell_edit$row
       col <- input$strata_cell_edit$col
-      str <- display_strata
+      str <- display_strata()
       str[row, col] <- input$strata_cell_edit$value
       display_strata(str)
     })
