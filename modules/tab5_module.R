@@ -76,6 +76,7 @@ tab5server <- function(id, strat_layers) {
     # computes the unique values of each column in the categorized data set
     observe({
       for(id in strat_layers$ids){
+        #print(unique(strat_layers$cols_categorized[[id]]))
         strat_layers$unique_vals[[id]] <- unique(strat_layers$cols_categorized[[id]])
       }
     }, priority = 2)
@@ -86,8 +87,14 @@ tab5server <- function(id, strat_layers) {
       ns <- session$ns
       for (layer_id in strat_layers$ids){
         col_name <- strat_layers$columns[[layer_id]]
+        #print("level1")
+        #print(strat_layers$unique_vals[[layer_id]])
         observe({
-          req(strat_layers$unique_vals[[layer_id]])
+          #print("level2")
+          #print(strat_layers$unique_vals[[layer_id]])
+          #print(length(strat_layers$unique_vals[[layer_id]]) > 0)
+          req(length(strat_layers$unique_vals[[layer_id]]) > 0)
+          #print(paste("creating server for", layer_id))
           ret <- selection_probability_server(paste0("sp_", layer_id), strat_layers$unique_vals[[layer_id]])
           observe({
             strat_layers$sel_kind[[layer_id]] = ret$kind

@@ -31,7 +31,7 @@ tab4ui <- function(id){
 
 
 # Define server logic
-tab4server <- function(id, data) {
+tab4server <- function(id, data, presets) {
   moduleServer(id, function(input, output, session) {
     
     # Saving the data uploaded in another tab and passes to this module.
@@ -93,8 +93,43 @@ tab4server <- function(id, data) {
         strat_layers$data_types[[layer_id]] <- layer_define_output$data_type
         strat_layers$categories[[layer_id]] <- layer_define_output$categories
       })
-      
     })
+    
+    observeEvent(presets(), {
+      # Create new UI for defining layer and adding it to list of tabs
+      ns <- session$ns
+      
+      strat_layers$ids <- presets()$ids
+      
+      lapply(strat_layers$ids, function(layer_id){
+        #column values which haven't been selected yet so no columns
+        # is selected for two stratification layers
+        #sc_vec <- strat_layers$columns
+        unselected_cols <- colnames(dataset())
+        preset_name <- presets()$columns[[layer_id]]
+        preset_data_type <- presets()$data_types[[layer_id]]
+        preset_categories <- presets()$categories[[layer_id]]
+        
+        # Creates a new tab for the tabsetpanel. This tab containts the UI
+        # to define a stratification layer. The defined parameters are defined
+        # and saved. Inserts tab into tabsetpanel
+        # TODO: More parameters besides the column name
+        new_def_layer_ui <- tabPanel(ns(paste0("panel_def_", layer_id)),
+                                     define_layer_ui(ns(paste0("def_", layer_id)), 
+                                                     unselected_cols))
+        # TODO: also take the information defining the categories
+        layer_define_output <- define_layer_server(paste0("def_", layer_id), dataset, 
+                                                   preset_name, preset_data_type, preset_categories)
+        insertTab(inputId = "strata_rename_input_ui", new_def_layer_ui)
+        observe({
+          strat_layers$columns[[layer_id]] <- layer_define_output$name
+          strat_layers$data_types[[layer_id]] <- layer_define_output$data_type
+          strat_layers$categories[[layer_id]] <- layer_define_output$categories
+        })
+      })
+      
+      
+    }, ignoreNULL = TRUE)
     
     # Outputting strat layer buttons UI
     output$strat_layer_buttons_ui <- renderUI({
@@ -143,7 +178,7 @@ tab4server <- function(id, data) {
     # saves a data frame of only the selected columns with the created categories
     observeEvent(strat_layers$cols_categorized, {
       cols <- strat_layers$cols_categorized
-      names(cols) <- strat_layers$columns
+      names(cols) <- strat_layers$columns[names(cols)]
       strat_layers$data <- data.frame(cols)
     })
     
