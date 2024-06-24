@@ -35,7 +35,7 @@ tab1ui <- function(id) {
     fluidRow(
       sidebarPanel(
         h5("Hier können Sie Ihre vorherig gezogene Stichprobe hochladen und diese als default Werte für Ihre neue Stichprobe nutzen.
-        Laden Sie hierfür die RData-Datei hoch, die Sie bei der Stichprobe neben der Dokumentation und
+        Laden Sie hierfür die RDS-Datei hoch, die Sie bei der Stichprobe neben der Dokumentation und
            CSV-Datei herunterladen haben."),
         fileInput(ns("file3"), "Stichprobendatei", buttonLabel = "Hochladen")
       )
