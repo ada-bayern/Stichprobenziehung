@@ -61,7 +61,7 @@ server <- function(input, output, session) {
   #tab2_1server("tab2_1", old = ret_tab1$old_sample, data = ret_tab1$uploaded_data)
   ret_tab3 <- tab3server("tab3", data = ret_tab1$uploaded_data, old = ret_tab1$old_sample)
   strat_layers <- tab4server("tab4", data = ret_tab3$filtered_data, presets = ret_tab1$old_sample)
-  ret_tab5 <- tab5server("tab5", strat_layers = strat_layers)
+  ret_tab5 <- tab5server("tab5", strat_layers = strat_layers, presets = ret_tab1$old_sample)
   tab6server("tab6", 
              data = ret_tab1$uploaded_data, 
              ident_primary = ret_tab1$ident_primary,

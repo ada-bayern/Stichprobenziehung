@@ -182,7 +182,6 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
           cat_names <- names(categories)
           vals <- unique(dataset()[[selected_column$name]])
           selected_vals <- unlist(categories)
-          print(selected_vals)
           unselected_vals <- setdiff(vals, selected_vals)
           
           fluidRow(
@@ -225,10 +224,6 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
         
         else{
           min <- min(dataset()[[selected_column$name]], na.rm = TRUE)
-          #max <- max(dataset()[[selected_column$name]], na.rm = TRUE)
-          #avg_dist <- (max - min) / num_categories()
-          #categories <- preset_categories()
-          
           list(
             numericInput(ns(paste0("min_cat_", 1)), paste0("Kategorie 1", " von"), value = min),
             lapply(1:num_categories(), function(i) {

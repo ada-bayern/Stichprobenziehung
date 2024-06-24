@@ -37,7 +37,7 @@ tab5ui <- function(id){
 }
 
 # Define server logic
-tab5server <- function(id, strat_layers) {
+tab5server <- function(id, strat_layers, presets) {
   moduleServer(id, function(input, output, session) {
     
     # Saving the data uploaded in another tab and passes to this module.
@@ -59,6 +59,45 @@ tab5server <- function(id, strat_layers) {
       
     })
     
+    # reads values from presets
+    observeEvent(presets(), {
+      ns <- session$ns
+      preset_sample_size <- presets()$sample_size
+      updateNumericInput(inputId = "sample_size", value = preset_sample_size)
+      
+      # renders the tabs for the tabset panel in which the selection probabilities
+      # are defined
+      output$define_selection_probs_ui <- renderUI({
+        
+        tabs <-  lapply(strat_layers$ids, function(layer_id) {
+          col_name <- strat_layers$columns[[layer_id]]
+          tabPanel(title = col_name, value = layer_id,
+                   selection_probability_ui(ns(paste0("sp_", layer_id)), col_name))
+        })
+        do.call(tabsetPanel, tabs)
+      })
+      
+      lapply(strat_layers$ids, function(layer_id){
+        observe({
+          vals <- strat_layers$unique_vals[[layer_id]]
+          preset_sel_kind <- presets()$sel_kind[[layer_id]]
+          preset_params <- presets()$sel_params[[layer_id]]
+          req(vals)
+          ret <- selection_probability_server(paste0("sp_", layer_id), vals, 
+                                              preset_sel_kind, preset_params)
+          observe({
+            strat_layers$sel_kind[[layer_id]] = ret$kind
+            strat_layers$sel_params[[layer_id]] = ret$vec
+          })
+        })
+      })
+      
+      lapply(strat_layers$ids, function(id){
+        
+        
+      })
+    })
+    
     
     # renders the tabs for the tabset panel in which the selection probabilities
     # are defined
@@ -76,7 +115,6 @@ tab5server <- function(id, strat_layers) {
     # computes the unique values of each column in the categorized data set
     observe({
       for(id in strat_layers$ids){
-        #print(unique(strat_layers$cols_categorized[[id]]))
         strat_layers$unique_vals[[id]] <- unique(strat_layers$cols_categorized[[id]])
       }
     }, priority = 2)
@@ -85,24 +123,19 @@ tab5server <- function(id, strat_layers) {
     # creating moduleservers for the selection probability logic and saving results
     observe({
       ns <- session$ns
-      for (layer_id in strat_layers$ids){
-        col_name <- strat_layers$columns[[layer_id]]
-        #print("level1")
-        #print(strat_layers$unique_vals[[layer_id]])
+      lapply(strat_layers$ids, function(layer_id){
         observe({
-          #print("level2")
-          #print(strat_layers$unique_vals[[layer_id]])
-          #print(length(strat_layers$unique_vals[[layer_id]]) > 0)
-          req(length(strat_layers$unique_vals[[layer_id]]) > 0)
-          #print(paste("creating server for", layer_id))
-          ret <- selection_probability_server(paste0("sp_", layer_id), strat_layers$unique_vals[[layer_id]])
+          vals <- strat_layers$unique_vals[[layer_id]]
+          req(vals)
+          ret <- selection_probability_server(paste0("sp_", layer_id), vals)
           observe({
             strat_layers$sel_kind[[layer_id]] = ret$kind
             strat_layers$sel_params[[layer_id]] = ret$vec
           })
         })
-      }
+      })
     }, priority = 1)
+    
     
     
     # Gathering the inputs for stratification size computation via package and 

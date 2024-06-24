@@ -102,9 +102,7 @@ tab4server <- function(id, data, presets) {
       strat_layers$ids <- presets()$ids
       
       lapply(strat_layers$ids, function(layer_id){
-        #column values which haven't been selected yet so no columns
-        # is selected for two stratification layers
-        #sc_vec <- strat_layers$columns
+        # all column names as options. Reading parameters defined in preset file
         unselected_cols <- colnames(dataset())
         preset_name <- presets()$columns[[layer_id]]
         preset_data_type <- presets()$data_types[[layer_id]]
@@ -113,11 +111,9 @@ tab4server <- function(id, data, presets) {
         # Creates a new tab for the tabsetpanel. This tab containts the UI
         # to define a stratification layer. The defined parameters are defined
         # and saved. Inserts tab into tabsetpanel
-        # TODO: More parameters besides the column name
         new_def_layer_ui <- tabPanel(ns(paste0("panel_def_", layer_id)),
                                      define_layer_ui(ns(paste0("def_", layer_id)), 
                                                      unselected_cols))
-        # TODO: also take the information defining the categories
         layer_define_output <- define_layer_server(paste0("def_", layer_id), dataset, 
                                                    preset_name, preset_data_type, preset_categories)
         insertTab(inputId = "strata_rename_input_ui", new_def_layer_ui)
@@ -153,6 +149,8 @@ tab4server <- function(id, data, presets) {
     })
     
     
+    # function to categorize columns.
+    # TODO: leave column as it is when no categories have been defined. 
     categorize_column <- function(id) {
       column_name <- strat_layers$columns[[id]]
       data_type <- strat_layers$data_types[[id]]
@@ -193,7 +191,6 @@ tab4server <- function(id, data, presets) {
     })
     
     # Creating crosstable of chosen row. 
-    # TODO: actually base this on all rows for which there is a strat layer
     output$crosstable <- renderTable({
       req(input$ct_column_one, input$ct_column_two, strat_layers$data)
       data <- strat_layers$data
