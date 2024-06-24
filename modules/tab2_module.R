@@ -61,14 +61,14 @@ tab2ui <- function(id){
         #radioButtons("format", "Document format", c("PDF", "HTML", "Word"), inline = TRUE),
         #downloadButton("downloadReport")
       ),
-    fluidRow(
-      column(width = 10),
+    #fluidRow(
+     # column(width = 10),
       # column(width = 5, downloadButton(ns("download_report"), "Report herunterladen"),
       #        br(),
       #        actionButton(ns("create_rmd"), "Erstelle den Report")),
-      column(width = 2, actionButton(ns("next_tab"), "Nächste Seite")), 
-      br(), 
-      br()),
+      #column(width = 2, actionButton(ns("next_tab"), "Nächste Seite")), 
+      #br(), 
+      #br()),
     fluidRow(
       tags$b(textOutput(ns("next1")))
       ) 
