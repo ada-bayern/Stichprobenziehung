@@ -1,4 +1,5 @@
 source("modules/selection_probability_module.R")
+# TODO: generic?
 source(file.path("../aktenstichprobe/R", "strata_sizes.R"))
 
 library(DT)

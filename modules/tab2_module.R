@@ -131,7 +131,7 @@ tab2server <- function(id, data, map_file) {
         "Diese Grafik zeigt die Summe der Akten pro Amtsgerichtsbezirk."
       })
       
-        #plot
+        #plot TODO: plotly
           output$plot1 <- renderPlot({
             ggplot(data(), aes(Gericht)) +
               geom_bar() +

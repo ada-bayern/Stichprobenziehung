@@ -1,3 +1,4 @@
+library("dplyr")
 
 # Define UI
 tab1ui <- function(id) {
@@ -63,18 +64,18 @@ tab1server <- function(id) {
     })
     
     observeEvent(input$file2, {
-      
-      #regions and their numbers of files 
+      # regions and their numbers of files 
       # TODO: user should be able to pick columns with map region, or this could
       # be recognized automatically
-      data_counts <- group_by(uploaded_data(), Bezirk)
-      data_counts <- summarise(data_counts, Anzahl = n())
-      data_counts <- as.data.frame(data_counts)
-      
+      data_counts <- uploaded_data() %>% # TODO: catch uploadet_data is NULL
+        group_by(Bezirk) %>% # TODO: generic
+        summarise(Anzahl = n()) %>%
+        as.data.frame(data_counts)
       
       mf <- readRDS(input$file2$datapath)
-      mf$`Anzahl der Fälle` <- data_counts$Anzahl[match(mf$court, data_counts$Bezirk)]
-      map_file(mf)
+      mf$`Anzahl der Fälle` <- data_counts$Anzahl[match(mf$court, data_counts$Bezirk)] # TODO: generic
+      #map_file(mf)
+      print()
     })
     
     observeEvent(input$file3, {

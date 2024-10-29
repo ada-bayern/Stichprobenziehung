@@ -1,9 +1,9 @@
 source("modules/define_layer_module_old.R")
 source("modules/selection_probability_module.R")
 library(gtsummary)
+# TODO: generic?
 source(file.path("../aktenstichprobe/R", "select_groups.R"))
 
-install.packages()
 # Define UI
 tab2_1ui <- function(id){
   ns <- NS(id)

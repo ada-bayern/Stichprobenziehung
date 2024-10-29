@@ -1,3 +1,4 @@
+# TODO: generic
 source(file.path("../aktenstichprobe/R", "strat_sample.R"))
 
 
