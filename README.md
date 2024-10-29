@@ -13,7 +13,7 @@ $ sudo apt install libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev li
 Open the R console in RStudio or by typing `R` into your cmd-line. To install the required packages, type:
 
 ```         
-> install.packages(c('shiny', 'ggplot2', 'shinythemes', 'shinydashboard', 'tidyverse', 'sf', 'tinytex', 'sortable', 'DT', 'gtsummary'))
+> install.packages(c('shiny', 'ggplot2', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'tidyverse', 'sf', 'tinytex', 'sortable', 'DT', 'gtsummary', 'plotly'))
 ```
 
 This can take some minutes...

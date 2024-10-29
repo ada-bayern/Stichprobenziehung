@@ -1,83 +1,106 @@
 library(DT)
+library(shiny)
+library(ggplot2)
+library(sf)
+
+# TODO: Kartenvorschau
 
 start_ui <- function(id) {
-    ns <- NS(id)
-    fluidPage(
-        titlePanel('Daten-Upload'),
-            
-        # CSV-Upload
-        sidebarLayout(
-            # Sidebar for actions and options
-            sidebarPanel(
-                fileInput(ns('csv_file'), 'CSV-Datei auswählen',        # Input for file upload
-                    accept=c('text/csv',
-                            'text/comma-separated-values,text/plain',
-                            '.csv')),
-                tags$hr(),                                  # Horizontal line for separation
-                checkboxInput(ns('csv_header'), 'Kopfzeile', TRUE), # Option to indicate if the first row contains headers
-                radioButtons(ns('csv_sep'), 'Separator',            # Options for specifying the separator
-                                choices = c(Komma = ',',
-                                            Semikolon = ';',
-                                            Tab = '\t'),
-                                selected = ','),            # Default selected separator
-                actionButton(ns('csv_upload_btn'), 'Hochladen')     # Button to trigger upload
-            ),
+  ns <- NS(id)
+  fluidPage(
+    titlePanel("Daten-Upload"),
 
-            # Preview
-            mainPanel(
-                h3('Datenvorschau'),                         # Title for the data preview section
-                tableOutput(ns('csv_preview'))                # Output area for the data preview table
-            )
-        ),
+    # CSV-Upload
+    sidebarLayout(
+      # Sidebar for actions and options
+      sidebarPanel(
+        # Input for file upload
+        fileInput(ns("csv_file"),
+                  "CSV-Datei auswählen",
+                  accept = c("text/csv",
+                             "text/comma-separated-values,text/plain",
+                             ".csv")),
+        tags$hr(),
+        # Option to indicate if the first row contains headers
+        checkboxInput(ns("csv_header"),
+                      "Kopfzeile",
+                      TRUE),
+        # Options for specifying the separator
+        radioButtons(ns("csv_sep"),
+                     "Separator",
+                     choices = c(Komma = ",",
+                                 Semikolon = ";",
+                                 Tab = "\t"),
+                     selected = ","),
+        # Button to trigger upload
+        actionButton(ns("csv_upload_btn"), "Hochladen")
+      ),
 
-        # RDS-Upload
-        sidebarLayout(
-            # Sidebar for actions and options
-            sidebarPanel(
-                fileInput(ns('rds_file'), 'Kartendatei (RDS) auswählen',     # Input for RDS file upload
-                        accept = '.rds'),
-                actionButton(ns('rds_upload_btn'), 'Hochladen')  # Button to trigger RDS upload
-            ),
+      # Preview
+      mainPanel(
+        h3("Datenvorschau"),
+        div(DTOutput(ns("csv_preview")),
+            style = "overflow-x: auto;")
+      )
+    ),
 
-            # Preview
-            mainPanel(
-                h3('Kartenvorschau'),  # Title for the RDS data preview section
-                verbatimTextOutput(ns('rds_preview'))  # Output area for the RDS data preview
-            )
-        )
+    # RDS-Upload
+    sidebarLayout(
+      # Sidebar for actions and options
+      sidebarPanel(
+        # Input for RDS upload
+        fileInput(ns("rds_file"), "Kartendatei (RDS) auswählen",
+                  accept = ".rds"),
+        # Button to trigger RDS upload
+        actionButton(ns("rds_upload_btn"), "Hochladen")
+      ),
+
+      # Preview
+      mainPanel(
+        h3("Kartenvorschau"),
+        verbatimTextOutput(ns("rds_preview"))
+      )
     )
+  )
 }
 
 start_server <- function(id) {
-    moduleServer(id, function(input, output, session) {
-        # Reactive values to store uploaded data
-        csv_data <- reactiveVal(NULL)  
-        rds_data <- reactiveVal(NULL)
-    
-        # Event to handle CSV file upload when the button is clicked
-        observeEvent(input$csv_upload_btn, {
-            req(input$csv_file)                          # Ensure a CSV file is selected
-            data <- read.csv(input$csv_file$datapath,   # Read the uploaded CSV file
-                            header = input$csv_header,  # Use header option from UI
-                            sep = input$csv_sep)        # Use selected separator
-            csv_data(data)                              # Store the uploaded CSV data in the reactive value
-        })
-        # Render the preview table for the uploaded CSV data
-        output$csv_preview <- renderTable({
-            req(csv_data())                             # Ensure CSV data is available
-            head(csv_data(), 5)                        # Show the first 10 rows of the uploaded CSV data
-        })
-        
-        # Event to handle RDS file upload when the button is clicked
-        observeEvent(input$rds_upload_btn, {
-            req(input$rds_file)                         # Ensure an RDS file is selected
-            data <- readRDS(input$rds_file$datapath)    # Read the uploaded RDS file
-            rds_data(data)                              # Store the uploaded RDS data in the reactive value
-        })
-        # Render the preview for the uploaded RDS data
-        output$rds_preview <- renderPrint({
-            req(rds_data())                             # Ensure RDS data is available
-            rds_data()                                  # Display the content of the uploaded RDS data
-        })
+  moduleServer(id, function(input, output, session) {
+    # Reactive values to store uploaded data
+    csv_data <- reactiveVal(NULL)
+    rds_data <- reactiveVal(NULL)
+
+    # Event to handle CSV file upload when the button is clicked
+    observeEvent(input$csv_upload_btn, {
+      req(input$csv_file)                       # Ensure a CSV file is selected
+      data <- read.csv(input$csv_file$datapath, # Read the uploaded CSV file
+                       header = input$csv_header,  # Use header option from UI
+                       sep = input$csv_sep)        # Use selected separator
+      csv_data(data)                     # Store the data in the reactive value
     })
+    # Render the preview table for the uploaded CSV data
+    output$csv_preview <- renderDT({
+      req(csv_data())
+      datatable(head(csv_data(), 5),
+                class = "cell-border stripe",
+                options = list(dom = "t"))
+    })
+
+    # Event to handle RDS file upload when the button is clicked
+    observeEvent(input$rds_upload_btn, {
+      req(input$rds_file)
+      data <- readRDS(input$rds_file$datapath)
+      rds_data(data)
+    })
+    # Render the preview for the uploaded RDS data
+    output$rds_preview <- renderPrint({
+      req(rds_data())
+      rds_data()
+    })
+
+    return(list(csv_data = csv_data, rds_data = rds_data))
+                # old_sample = old_sample,
+                # ident_primary = ident_primary,
+                # ident_secondary = ident_secondary
+  })
 }
