@@ -8,7 +8,7 @@ library(tinytex)
 
 source("modules/start.R")
 source("modules/dashboard.R")
-# source("modules/selection")
+source("modules/selection.R")
 # source("modules/categories")
 # source("modules/sample")
 # source("modules/overview")
@@ -24,7 +24,9 @@ db_sidebar <- dashboardSidebar(
     menuItem("Datenauswahl", tabName = "selection", icon = icon("arrow-pointer")), # nolint
     menuItem("Kategorien", tabName = "categories", icon = icon("icons")),
     menuItem("Stichprobe", tabName = "sample", icon = icon("table")),
-    menuItem("Überblick", tabName = "overview", icon = icon("list-alt"))
+    menuItem("Überblick", tabName = "overview", icon = icon("list-alt")),
+    menuItem(""),
+    menuItem("Manual", tabName = "manual", icon = icon("question"))
   )
 )
 db_body <- dashboardBody(

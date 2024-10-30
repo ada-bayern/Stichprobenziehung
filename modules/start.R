@@ -20,7 +20,7 @@ start_ui <- function(id) {
                   accept = c("text/csv",
                              "text/comma-separated-values,text/plain",
                              ".csv")),
-        tags$hr(),
+        hr(),
         # Option to indicate if the first row contains headers
         checkboxInput(ns("csv_header"),
                       "Kopfzeile",
