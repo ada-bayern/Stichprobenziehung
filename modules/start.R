@@ -1,5 +1,8 @@
 library(DT)
 library(shiny)
+library(shinydashboard)
+library(shinyWidgets)
+library(dplyr)
 
 # TODO: Kartenvorschau
 
@@ -31,7 +34,17 @@ start_ui <- function(id) {
                                  Tab = "\t"),
                      selected = ","),
         # Button to trigger upload
-        actionButton(ns("csv_upload_btn"), "Hochladen")
+        actionButton(ns("csv_upload_btn"), "Hochladen"),
+        hr(color = "black"),
+        pickerInput(
+          inputId = ns("col_selector"),
+          label = "Spaltenauswahl:",
+          choices = NULL,  # Placeholder, will be updated in the server
+          selected = NULL, # Placeholder, will be updated in the server
+          multiple = TRUE,
+          options = list(`actions-box` = TRUE)
+        ),
+        actionButton(ns("select_btn"), "Auswahl anwenden")
       ),
 
       # Preview
@@ -48,6 +61,8 @@ start_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     # Reactive values to store uploaded data
     csv_data <- reactiveVal(NULL)
+    final_data <- reactiveVal(NULL)
+    done <- reactiveVal(FALSE)
 
     # Event to handle CSV file upload when the button is clicked
     observeEvent(input$csv_upload_btn, {
@@ -55,18 +70,38 @@ start_server <- function(id) {
       data <- read.csv(input$csv_file$datapath, # Read the uploaded CSV file
                        header = input$csv_header,  # Use header option from UI
                        sep = input$csv_sep)        # Use selected separator
-      csv_data(data)                     # Store the data in the reactive value
+      csv_data(data)                      # Store the data in the reactive value
+      final_data(data)            # Use another reactive value for selected data
+      done(TRUE)
     })
+
+    observe({
+      req(csv_data())
+      # Choose columns
+      updatePickerInput(
+        session,
+        "col_selector",
+        choices = colnames(csv_data()),
+        selected = colnames(csv_data())
+      )
+    })
+
+    observeEvent(input$select_btn, {
+      cols <- input$col_selector
+      final_data(select(csv_data(), cols))
+    })
+
     # Render the preview table for the uploaded CSV data
     output$csv_preview <- renderDT({
-      req(csv_data())
-      datatable((csv_data()),
+      req(final_data())
+
+      datatable(final_data(),
                 class = "cell-border stripe",
                 options = list(pageLength = 5))
     })
 
-
-    return(list(csv_data = csv_data))
+    return(list(data = final_data,
+                done = done))
                 # old_sample = old_sample,
                 # ident_primary = ident_primary,
                 # ident_secondary = ident_secondary

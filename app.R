@@ -1,8 +1,7 @@
 library(shiny)
 library(shinydashboard)
-library(ggplot2)
 library(shinythemes)
-library(tidyverse)
+library(dplyr)
 library(tinytex)
 
 source("modules/start.R")
@@ -18,6 +17,7 @@ db_header <- dashboardHeader(
 )
 db_sidebar <- dashboardSidebar(
   sidebarMenu(
+    id = "menu",
     menuItem("Start", tabName = "start", icon = icon("play")),
     menuItem("Datenansicht", tabName = "dashboard", icon = icon("dashboard")),
     menuItem("Datenauswahl", tabName = "selection", icon = icon("arrow-pointer")), # nolint
@@ -29,11 +29,13 @@ db_sidebar <- dashboardSidebar(
   )
 )
 db_body <- dashboardBody(
+  useShinyjs(), # init shinyjs
   tabItems(
     tabItem("start", start_ui("start")),
     tabItem("dashboard", dashboard_ui("dashboard")),
     tabItem("selection", div(p("Datenauswahl")))
-  )
+  ),
+  actionButton("next_button", "Weiter")
 )
 ui <- dashboardPage(
   db_header,
@@ -44,46 +46,20 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 160*1024^2)
-  data <- start_server("start")
+  ret_start <- start_server("start")
   dashboard_server("dashboard",
-                   csv_data = data$csv_data)
+                   csv_data = ret_start$data)
+
+  # Observe the Next button in the main server function
+  observeEvent(input$next_button, {
+    current_tab <- input$menu
+    next_tab <- case_when(
+      current_tab == "start" & ret_start$done() ~ "dashboard",
+      current_tab == "dashboard" ~ "selection",
+      .default = current_tab
+    )
+    updateTabItems(session, "menu", selected = next_tab)
+  })
 }
 
 shinyApp(ui, server)
-
-#   tabsetPanel(
-#     tabPanel("Startseite", tab1ui("tab1")),
-#     tabPanel("Daten kennenlernen", tab2ui("tab2")),
-#     #tabPanel("Alte Stichprobe einsehen", tab2_1ui("tab2_1")),
-#     tabPanel("Grundgesamtheit auswählen", tab3ui("tab3")),
-#     # tabPanel("Kategorien erstellen", tab4ui("tab4")),
-#     # tabPanel("Stichprobe definieren", tab5ui("tab5")),
-#     # tabPanel("Stichprobe einsehen", tab6ui("tab6"))
-#   )
-
-# server <- function(input, output, session) {
-#   options(shiny.maxRequestSize = 160*1024^2)
-  
-#   output$panel <- renderText({
-#     paste("Current panel: ", input$tabset)
-#   })
-  
-#   ret_tab1 <- tab1server("tab1")
-#   tab2server("tab2", data = ret_tab1$uploaded_data, map_file = ret_tab1$map_file)
-#   #tab2_1server("tab2_1", old = ret_tab1$old_sample, data = ret_tab1$uploaded_data)
-#   ret_tab3 <- tab3server("tab3", data = ret_tab1$uploaded_data, old = ret_tab1$old_sample)
-#   strat_layers <- tab4server("tab4", data = ret_tab3$filtered_data, presets = ret_tab1$old_sample)
-#   ret_tab5 <- tab5server("tab5", strat_layers = strat_layers, presets = ret_tab1$old_sample)
-#   tab6server("tab6", 
-#              data = ret_tab1$uploaded_data, 
-#              ident_primary = ret_tab1$ident_primary,
-#              ident_secondary = ret_tab1$ident_secondary,
-#              strat_layers = strat_layers, 
-#              strata = ret_tab5$strata, 
-#              sample_size = ret_tab5$sample_size, 
-#              selected_column = ret_tab3$selected_column, 
-#              selected_values = ret_tab3$selected_values,
-#              value_choices = ret_tab3$value_choices,
-#              uploaded_data = ret_tab1$uploaded_data)
-# }
-
