@@ -3,7 +3,6 @@ library(shinydashboard)
 library(ggplot2)
 library(shinythemes)
 library(tidyverse)
-library(sf)
 library(tinytex)
 
 source("modules/start.R")
@@ -40,15 +39,14 @@ ui <- dashboardPage(
   db_header,
   db_sidebar,
   db_body,
-  skin = "red"
+  skin = "green"
 )
 
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 160*1024^2)
   data <- start_server("start")
   dashboard_server("dashboard",
-                   csv_data = data$csv_data,
-                   map_data = data$rds_data)
+                   csv_data = data$csv_data)
 }
 
 shinyApp(ui, server)

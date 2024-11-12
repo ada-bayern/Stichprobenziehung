@@ -1,7 +1,5 @@
 library(DT)
 library(shiny)
-library(ggplot2)
-library(sf)
 
 # TODO: Kartenvorschau
 
@@ -42,24 +40,6 @@ start_ui <- function(id) {
         div(DTOutput(ns("csv_preview")),
             style = "overflow-x: auto;")
       )
-    ),
-
-    # RDS-Upload
-    sidebarLayout(
-      # Sidebar for actions and options
-      sidebarPanel(
-        # Input for RDS upload
-        fileInput(ns("rds_file"), "Kartendatei (RDS) auswählen",
-                  accept = ".rds"),
-        # Button to trigger RDS upload
-        actionButton(ns("rds_upload_btn"), "Hochladen")
-      ),
-
-      # Preview
-      mainPanel(
-        h3("Kartenvorschau"),
-        verbatimTextOutput(ns("rds_preview"))
-      )
     )
   )
 }
@@ -68,7 +48,6 @@ start_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     # Reactive values to store uploaded data
     csv_data <- reactiveVal(NULL)
-    rds_data <- reactiveVal(NULL)
 
     # Event to handle CSV file upload when the button is clicked
     observeEvent(input$csv_upload_btn, {
@@ -81,24 +60,13 @@ start_server <- function(id) {
     # Render the preview table for the uploaded CSV data
     output$csv_preview <- renderDT({
       req(csv_data())
-      datatable(head(csv_data(), 5),
+      datatable((csv_data()),
                 class = "cell-border stripe",
-                options = list(dom = "t"))
+                options = list(pageLength = 5))
     })
 
-    # Event to handle RDS file upload when the button is clicked
-    observeEvent(input$rds_upload_btn, {
-      req(input$rds_file)
-      data <- readRDS(input$rds_file$datapath)
-      rds_data(data)
-    })
-    # Render the preview for the uploaded RDS data
-    output$rds_preview <- renderPrint({
-      req(rds_data())
-      rds_data()
-    })
 
-    return(list(csv_data = csv_data, rds_data = rds_data))
+    return(list(csv_data = csv_data))
                 # old_sample = old_sample,
                 # ident_primary = ident_primary,
                 # ident_secondary = ident_secondary
