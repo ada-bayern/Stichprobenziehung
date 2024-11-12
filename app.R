@@ -33,7 +33,7 @@ db_body <- dashboardBody(
   tabItems(
     tabItem("start", start_ui("start")),
     tabItem("dashboard", dashboard_ui("dashboard")),
-    tabItem("selection", div(p("Datenauswahl")))
+    tabItem("selection", selection_ui("selection"))
   ),
   actionButton("next_button", "Weiter")
 )
@@ -47,8 +47,8 @@ ui <- dashboardPage(
 server <- function(input, output, session) {
   options(shiny.maxRequestSize = 160*1024^2)
   ret_start <- start_server("start")
-  dashboard_server("dashboard",
-                   csv_data = ret_start$data)
+  dashboard_server("dashboard", csv_data = ret_start$data)
+  selection_server("selection", csv_data = ret_start$data)
 
   # Observe the Next button in the main server function
   observeEvent(input$next_button, {

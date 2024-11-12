@@ -5,11 +5,14 @@ library(plotly)
 library(dplyr)
 library(stringr)
 
-# Define UI
-selection_ui <- function(id){
+source("modules/utils.R")
+
+
+# UI function for selection module
+selection_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
-    titlePanel("Datenauswahl"),
+    titlePanel("Datenübersicht"),
 
     # Sidebar Panel
     sidebarLayout(
@@ -17,264 +20,163 @@ selection_ui <- function(id){
       sidebarPanel(
         selectInput(
           inputId = ns("column_selector"),
-          label = "Hauptmerkmal:",
+          label = "Merkmal:",
           choices = NULL,  # Placeholder, will be updated in the server
-          selected = NULL)
+          selected = NULL
+        ),
+        pickerInput(
+          inputId = ns("filter_selector"),
+          label = "Filter:",
+          choices = NULL,  # Placeholder, will be updated in the server
+          selected = NULL, # Placeholder, will be updated in the server
+          multiple = TRUE,
+          options = list(`actions-box` = TRUE)
+        ),
+        actionButton(ns("filter_btn"), "Filter unwiderruflich anwenden"),
+        hr(),
+        switchInput(
+          inputId = ns("log_scale"),
+          label = "Log-Skala",
+          value = FALSE,
+          onLabel = "An",
+          offLabel = "Aus"
+        ),
+        hr(),
+        DTOutput(ns("column_summary"))  # Summary output
       ),
-      mainPanel()
-    )
-  )
-}
 
-
-tab3ui <- function(id){
-  ns <- NS(id)
-  # Defining the layout elements. The options for filtering are only shown when
-  # the "Filter" button is pressed and disappear when it is pressed again
-  fluidPage(
-    titlePanel("Grundgesamtheit Auswählen"),
-    sidebarLayout(
-      sidebarPanel(
-        actionButton(ns("filter_dropdown"), "Filtern", icon = icon("filter")),
-        conditionalPanel(
-          condition = "input.filter_dropdown % 2 != 0",
-          ns = ns,
-          actionButton(ns("update_button"), "Auswahl übernehmen", icon = icon("refresh")),
-          uiOutput(ns("column_dropdown")),
-          textOutput(ns("text6")),
-          checkboxGroupInput(ns("value_dropdown"), label = NULL, choices = c())
-        )
-      ),
+      # Main Panel for Plots
       mainPanel(
-        textOutput(ns("pop_count")),
-        DTOutput(ns("filtered_table"))
-        #tableOutput(ns("filtered_table")),
+        box(
+          title = "Merkmalsverteilung (Merkmal 1)",
+          width = 12,
+          plotlyOutput(ns("dist_plot"),
+                       height = "90vh")
+        ),
       )
     )
   )
 }
 
-# Define server logic
-tab3server <- function(id, data, old) {
+prepare_data <- function(input, data) {
+  col <- input$column_selector
+  filter_vals <- input$filter_selector
+
+  if (is.null(col) || col == "") return(NULL)
+
+  # filter data by selected grouping values
+  if (is.numeric(data[[col]])) {
+    # Extract bin range from filter_choices (binned labels like "0-10", etc.)
+
+    # Split the bin labels into start and end ranges
+    # (assumes label format "start-end")
+    # filter_ranges <- sapply(filter_vals, function(v) {
+    #   out <- strsplit(v, "-")
+    #   out <- sapply(out, function(num) as.numeric(trimws((num))))
+    #   out
+    # })
+
+    # # Filter the data based on numeric bins
+    # filtered_data <- data %>%
+    #   filter(
+    #     apply(data, 1, function(row) {
+    #       value <- row[[group_col]]
+    #       any(sapply(filter_ranges, function(range) {
+    #         value >= range[1] & value < range[2]
+    #       }))
+    #     })
+    #   )
+    filtered_data <- data
+
+  } else {
+    filtered_data <- data %>%
+      filter(data[[col]] %in% filter_vals)
+  }
+
+  return(list(data = filtered_data, col = col))
+}
+
+
+# Server function for dashboard module
+selection_server <- function(id, csv_data) {
   moduleServer(id, function(input, output, session) {
-    
-    ns <- session$ns
-    
-    # this controls number of value choices in dropdown menu. If this is not done,
-    #the app can crash or struggle with rendering when a column with many unique
-    # values (like an id column) is selected for filtering
-    max_choices = 100
-    
-    # The filtered population
-    filtered_data <- reactiveVal(NULL)
-    
-    # Defining the column and the column values by which to filter
-    # selected_column: string of column selected for filtering
-    # selected_values: character vector of values selected from that column
-    # value_choices: the possible values of the selected column plus "Alle auswählen"
-    selected_column <- reactiveVal(NULL)
-    selected_values <- reactiveVal(NULL)
-    value_choices <- reactiveVal(NULL)
-    
-    observeEvent(data(), {
-      filtered_data(data())
-    })
-    
-    observeEvent(old(), {
-      if (is.null(old())) {
-        showNotification("Alte Stichprobe wurde nicht hochgeladen", type = "message")
-      } else {
-        showNotification("Alte Stichprobe wurde erfolgreich hochgeladen", type = "message")
-      }
-    })
-    
-    
-##################
-    # renders select input based on column names in dataset
-    output$column_dropdown <- renderUI({
-      selectInput(ns("column_dropdown"), label = "Spalte zum Filtern auswählen",
-                  choices = colnames(data()))
-    })
-                 
-    # Updates selected column
-    observeEvent(input$column_dropdown, {
-      selected_column(input$column_dropdown)
-    })
-    
-    # updates the values to filter by when column is selected
-    observeEvent(selected_column(),{
-      choices = c("Alle auswählen", unique(data()[[selected_column()]]))
-      choices = head(choices[!is.na(choices)], max_choices)
-      value_choices(choices)
-      selected_values(choices)
-    })
-    
-    # displays the changed value options
-    observeEvent(value_choices(), {
-      updateCheckboxGroupInput(inputId = "value_dropdown",
-                               choices = value_choices())
-    })
-    
-    # Handles the logic behind select all button. The button should be unselected
-    # as soon any other button is deselected, deselect all when it is deselected, 
-    # and select all when it is selected. 
-    eval_selected_values <- function(value_choices, input_values, selected_values){
-      
-      select_all <- "Alle auswählen" %in% selected_values
-      select_all_input <- "Alle auswählen" %in% input_values
-      all_selected_input <- all(value_choices %in% input_values) 
-      all_selected <- all(value_choices %in% selected_values)
-      
-      if(select_all & !select_all_input){
-        return(c())
-      }
-      if(select_all & !all_selected_input){
-        return(input_values[input_values != "Alle auswählen"])
-      }
-      if(!select_all & select_all_input){
-        return(c("Alle auswählen", value_choices))
-      }
-      return(input_values)
-    }
-    
-    # evaluating change of the values selected by user, including logic for
-    # "select all" button
-    observeEvent(input$value_dropdown, {
-      selected_values(eval_selected_values(value_choices(), input$value_dropdown,
-                                           selected_values()))
-    })
-    
-    # renders selected values as they change. Ignores NULL values as an empty vector
-    # is NULL
-    observeEvent(selected_values(), {
-      if(length(selected_values()) == 0){
-        to_select = ""
-      } else {
-        to_select = selected_values()
-      }
-      updateCheckboxGroupInput(inputId = "value_dropdown", 
-                               selected = to_select)
-    }, ignoreNULL = FALSE)
-    
-    
-    # filters the population
+
+    # Observe and update the dropdown choices based on column names in csv_data
     observe({
-      req(data(), selected_column())
-      filtered_data(subset(data(), data()[[selected_column()]] %in% selected_values()))
+      updateSelectInput(
+        session,
+        "column_selector",
+        choices = names(csv_data())
+      )
     })
-      
-    
-    # displays number of rows in filtered data
-    output$pop_count <- renderText({
-      paste("Zeilen insgesamt:", nrow(filtered_data()))
+
+    # Observe and update the dropdown choices based on column names in map_data
+    observeEvent(input$column_selector, {
+      filter_col <- input$column_selector
+      choices_data <- csv_data()[[filter_col]]
+
+      # Check if the column is numeric
+      if (is.numeric(choices_data)) {
+        # Define the bin width or number of bins you want
+        # max <- max(choices_data, na.rm = TRUE)
+        # min <- min(choices_data, na.rm = TRUE)
+        # bins <- seq(min, max, by = (max - min) / 20)
+
+        # # Create binned data
+        # choices_list <- cut(choices_data,
+        #                     breaks = bins,
+        #                     include.lowest = TRUE,
+        #                     labels = FALSE)
+        # choices_list <- unique(choices_list)  # Get unique bins
+        # choices_list <- sort(choices_list)
+
+        # # Convert bins to a more readable format
+        # choices_list <- sapply(choices_list, function(x) {
+        #   range_start <- bins[x]
+        #   range_end <- bins[x + 1]
+        #   paste(range_start, "-", range_end)
+        # })
+        choices_list <- NULL
+      } else {
+        choices_list <- unique(choices_data)
+      }
+
+      # Choose court to filter data by
+      updatePickerInput(
+        session,
+        "filter_selector",
+        choices = choices_list,
+        selected = choices_list
+      )
     })
-    
-    
-    # Showing the filtered table
-    output$filtered_table <- renderDT({
-      datatable(filtered_data(), 
-                class = "cell-border stripe", 
-                options = list(dom = "ltpr"))
+
+    observeEvent(input$filter_btn, {
+      p <- prepare_data(input, csv_data())
+      if (!is.null(p)) {
+        csv_data(p$data)
+      }
     })
-    
-    ###############################################################################
-    ##default
-    observeEvent(!is.null(old()), {
 
-      old_sample <- old()
+    # Render the column summary based on the selected column
+    output$column_summary <- renderDT({
+      p <- prepare_data(input, csv_data())
 
-      selected_column(old_sample[["selected_column"]])
-      selected_values(old_sample[["selected_values"]])
-      value_choices(old_sample[["value_choices"]])
-
-      # renders select input based on column names in dataset
-      output$column_dropdown <- renderUI({
-        selectInput(ns("column_dropdown"), label = "Diese Spalte wurde zum filtern ausgewählt",
-                    choices = colnames(data()), selected = selected_column())
-      })
-
-      observeEvent(input$column_dropdown, {
-      selected_values(old_sample[["selected_values"]])
-      to_select_1 = selected_values()
-      updateCheckboxGroupInput(session, "value_dropdown",
-                               selected = to_select_1)#old_sample[["selected_values"]])
-      })
-
-      # filters the population
-      observe({
-        req(data(), selected_column())
-        filtered_data(subset(data(), data()[[selected_column()]] %in% selected_values()))
-      })
-
-
-      # displays number of rows in filtered data
-      output$pop_count <- renderText({
-        paste("Zeilen insgesamt:", nrow(filtered_data()))
-      })
-
-
-      # Showing the filtered table
-      output$filtered_table <- renderDT({
-        datatable(filtered_data(),
-                  class = "cell-border stripe",
-                  options = list(dom = "ltpr"))
-      })
-
-      observeEvent(input$update_button, {
-
-      selected_column(old_sample[["selected_column"]])
-      selected_values(old_sample[["selected_values"]])
-      #value_choices(old_sample[["value_choices"]])
-
-      # renders select input based on column names in dataset
-      output$column_dropdown <- renderUI({
-        selectInput(ns("column_dropdown"), label = "Diese Spalte wurde zum filtern ausgewählt",
-                    choices = colnames(data()), selected = selected_column())
-      })
-
-      observeEvent(input$column_dropdown, {
-        selected_values(old_sample[["selected_values"]])
-        to_select_1 = selected_values()
-        updateCheckboxGroupInput(session, "value_dropdown",
-                                 selected = to_select_1)#old_sample[["selected_values"]])
-      })
-
-
-      # filters the population
-      observe({
-        req(data(), selected_column())
-        filtered_data(subset(data(), data()[[selected_column()]] %in% selected_values()))
-      })
-
-
-      # displays number of rows in filtered data
-      output$pop_count <- renderText({
-        paste("Zeilen insgesamt:", nrow(filtered_data()))
-      })
-
-
-      # Showing the filtered table
-      output$filtered_table <- renderDT({
-        datatable(filtered_data(),
-                  class = "cell-border stripe",
-                  options = list(dom = "ltpr"))
-      })
-      })
-
-    }, ignoreNULL = TRUE)
-    
-    observeEvent(is.null(old()), {
-      observeEvent(input$update_button,{
-        showNotification("Es wurde keine alte Stichprobe hochgeladen!", type = "error")
-      })
+      # Calculate and display summary based on data type
+      summarise_col(p$data, p$main_col)
     })
-    
-    ##default
-    ################################################################################
-   
-    # return filtered data
-    return(list(filtered_data = filtered_data,  selected_column = selected_column,
-           selected_values = selected_values, value_choices = value_choices))
-    
-  })   
+
+    # Render the distribution plot based on selected column and data type
+    output$dist_plot <- renderPlotly({
+      p <- prepare_data(input, csv_data())
+
+      # get distribution plot (numeric/categorical)
+      fig <- plot_univariate(p$data, p$col)
+
+      # Apply log scale to y-axis if switch is enabled
+      if (input$log_scale) {
+        fig <- fig %>% layout(yaxis = list(type = "log"))
+      }
+      fig
+    })
+  })
 }
