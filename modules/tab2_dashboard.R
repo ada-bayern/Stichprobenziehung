@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyjs)
 library(DT)
 library(shinyWidgets)
 library(plotly)
@@ -8,8 +9,9 @@ library(stringr)
 source("modules/utils.R")
 
 
-# UI function for selection module
-selection_ui <- function(id) {
+
+# UI function for dashboard module
+dashboard_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
     titlePanel("Datenübersicht"),
@@ -20,7 +22,13 @@ selection_ui <- function(id) {
       sidebarPanel(
         selectInput(
           inputId = ns("column_selector"),
-          label = "Merkmal:",
+          label = "Hauptmerkmal:",
+          choices = NULL,  # Placeholder, will be updated in the server
+          selected = NULL
+        ),
+        selectInput(
+          inputId = ns("column_selector2"),
+          label = "Gruppierungsmerkmal:",
           choices = NULL,  # Placeholder, will be updated in the server
           selected = NULL
         ),
@@ -32,8 +40,6 @@ selection_ui <- function(id) {
           multiple = TRUE,
           options = list(`actions-box` = TRUE)
         ),
-        actionButton(ns("filter_btn"), "Filter unwiderruflich anwenden"),
-        hr(),
         switchInput(
           inputId = ns("log_scale"),
           label = "Log-Skala",
@@ -53,52 +59,21 @@ selection_ui <- function(id) {
           plotlyOutput(ns("dist_plot"),
                        height = "90vh")
         ),
+        hr(),
+        box(
+          title = "Bivariate Merkmalsverteilung",
+          width = 12,
+          plotlyOutput(ns("bivariate_plot"),
+                       height = "90vh")
+        )
       )
     )
   )
 }
 
-prepare_data <- function(input, data) {
-  col <- input$column_selector
-  filter_vals <- input$filter_selector
-
-  if (is.null(col) || col == "") return(NULL)
-
-  # filter data by selected grouping values
-  if (is.numeric(data[[col]])) {
-    # Extract bin range from filter_choices (binned labels like "0-10", etc.)
-
-    # Split the bin labels into start and end ranges
-    # (assumes label format "start-end")
-    # filter_ranges <- sapply(filter_vals, function(v) {
-    #   out <- strsplit(v, "-")
-    #   out <- sapply(out, function(num) as.numeric(trimws((num))))
-    #   out
-    # })
-
-    # # Filter the data based on numeric bins
-    # filtered_data <- data %>%
-    #   filter(
-    #     apply(data, 1, function(row) {
-    #       value <- row[[group_col]]
-    #       any(sapply(filter_ranges, function(range) {
-    #         value >= range[1] & value < range[2]
-    #       }))
-    #     })
-    #   )
-    filtered_data <- data
-
-  } else {
-    filtered_data <- data %>%
-      filter(data[[col]] %in% filter_vals)
-  }
-
-  return(list(data = filtered_data, col = col))
-}
-
 
 # Server function for dashboard module
-selection_server <- function(id, csv_data) {
+dashboard_server <- function(id, csv_data) {
   moduleServer(id, function(input, output, session) {
 
     # Observe and update the dropdown choices based on column names in csv_data
@@ -110,9 +85,17 @@ selection_server <- function(id, csv_data) {
       )
     })
 
+    observe({
+      updateSelectInput(
+        session,
+        "column_selector2",
+        choices = names(csv_data())
+      )
+    })
+
     # Observe and update the dropdown choices based on column names in map_data
-    observeEvent(input$column_selector, {
-      filter_col <- input$column_selector
+    observeEvent(input$column_selector2, {
+      filter_col <- input$column_selector2
       choices_data <- csv_data()[[filter_col]]
 
       # Check if the column is numeric
@@ -136,7 +119,7 @@ selection_server <- function(id, csv_data) {
         #   range_end <- bins[x + 1]
         #   paste(range_start, "-", range_end)
         # })
-        choices_list <- NULL
+        choices_list <- c(0)
       } else {
         choices_list <- unique(choices_data)
       }
@@ -150,33 +133,44 @@ selection_server <- function(id, csv_data) {
       )
     })
 
-    observeEvent(input$filter_btn, {
-      p <- prepare_data(input, csv_data())
-      if (!is.null(p)) {
-        csv_data(p$data)
-      }
-    })
-
     # Render the column summary based on the selected column
     output$column_summary <- renderDT({
-      p <- prepare_data(input, csv_data())
+      main_col <- input$column_selector
+      group_col <- input$column_selector2
+      filter_vals <- input$filter_selector
+      data <- filter_data(csv_data(), group_col, filter_vals)
 
       # Calculate and display summary based on data type
-      summarise_col(p$data, p$main_col)
+      summarise_col(data, main_col)
     })
 
     # Render the distribution plot based on selected column and data type
     output$dist_plot <- renderPlotly({
-      p <- prepare_data(input, csv_data())
+      main_col <- input$column_selector
+      group_col <- input$column_selector2
+      filter_vals <- input$filter_selector
+      data <- filter_data(csv_data(), group_col, filter_vals)
 
       # get distribution plot (numeric/categorical)
-      fig <- plot_univariate(p$data, p$col)
+      fig <- plot_univariate(data, main_col)
 
       # Apply log scale to y-axis if switch is enabled
       if (input$log_scale) {
         fig <- fig %>% layout(yaxis = list(type = "log"))
       }
       fig
+    })
+
+    # Render the bivariate behavior of two selected columns based on
+    # their data types
+    output$bivariate_plot <- renderPlotly({
+      main_col <- input$column_selector
+      group_col <- input$column_selector2
+      filter_vals <- input$filter_selector
+      data <- filter_data(csv_data(), group_col, filter_vals)
+
+      # get distribution plot (numeric/categorical)
+      plot_bivariate(data, main_col, group_col)
     })
   })
 }

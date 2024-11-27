@@ -1,12 +1,13 @@
+library(shiny)
 
 source("modules/define_layer_module.R")
 source("modules/selection_probability_module.R")
 # library(gtsummary)
 # TODO: generic?
-source(file.path("../aktenstichprobe/R", "select_groups.R"))
+#source(file.path("../aktenstichprobe/R", "select_groups.R"))
 
 # Define UI
-tab4ui <- function(id){
+tab4ui <- function(id) {
   ns <- NS(id)
   # Defining the layout elements. Action button to add new stratification layers
   # adds button for each layer. These buttons are tied to dynamically generated
@@ -17,7 +18,7 @@ tab4ui <- function(id){
     sidebarLayout(
       mainPanel(
         uiOutput(ns("strat_layer_buttons_ui")),
-        actionButton(ns("add_strat_layer_button"), "Schicht hinzufügen", 
+        actionButton(ns("add_strat_layer_button"), "Schicht hinzufügen",
                      icon = icon("plus")),
         tabsetPanel(id = ns("strata_rename_input_ui"), type="hidden")
       ),
@@ -31,7 +32,7 @@ tab4ui <- function(id){
 
 
 # Define server logic
-tab4server <- function(id, data, presets) {
+tab4server <- function(id, data, presets = NULL) {
   moduleServer(id, function(input, output, session) {
     
     # Saving the data uploaded in another tab and passes to this module.

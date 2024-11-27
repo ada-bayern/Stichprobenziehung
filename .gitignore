@@ -3,5 +3,6 @@
 .RData
 .Ruserdata
 
+*.zip
 data
 notebooks

@@ -5,13 +5,14 @@ library(plotly)
 library(dplyr)
 library(stringr)
 
+# TODO: filter numeric data
+# TODO: handle max_val
 
-prepare_data <- function(input, data) {
-  main_col <- input$column_selector
-  group_col <- input$column_selector2
-  filter_vals <- input$filter_selector
-
-  if (is.null(main_col) || main_col == "") return(NULL)
+#' Filter data by values in a single column
+filter_data <- function(data, group_col, filter_vals) {
+  if (is.null(filter_vals)) {
+    return(data)
+  }
 
   # filter data by selected grouping values
   if (is.numeric(data[[group_col]])) {
@@ -35,14 +36,12 @@ prepare_data <- function(input, data) {
     #       }))
     #     })
     #   )
-    filtered_data <- data
+    return(data)
 
   } else {
-    filtered_data  <- data %>%
-      filter(data[[group_col]] %in% filter_vals)
+    filtered_data <- data[data[[group_col]] %in% filter_vals, ]
+    return(filtered_data)
   }
-
-  return(list(data = filtered_data, main_col = main_col, group_col = group_col))
 }
 
 # Returns a summary of a data column of arbitrary type as a DT (datatable)
@@ -61,7 +60,8 @@ summarise_col <- function(data, var) {
 
   } else {
     # Error message
-    summary_df <- data.frame(Message = "Error: Der Datentyp des ausgewählten Merkmals ist unbekannt.") # nolint
+    summary_df <- data.frame(Message = "Error: Der Datentyp des ausgewählten
+																				Merkmals ist unbekannt.")
   }
 
   datatable(summary_df, options = list(dom = "t", paging = FALSE))
@@ -102,7 +102,7 @@ plot_univariate <- function(data, var) {
 
 # Returns a plotly object displaying a bivariate distribution of two selected
 # data columns of arbitrary type with custom tooltips
-plot_bivariate <- function(data, var1, var2) {
+plot_bivariate <- function(data, var1, var2, max_vals = 100) {
   # Get the selected columns
   col1 <- data[[var1]]
   col2 <- data[[var2]]
@@ -111,7 +111,7 @@ plot_bivariate <- function(data, var1, var2) {
   for (col in c(col1, col2)) {
     if (is.factor(col) || is.character(col)) {
       # Check unique values count
-      if (length(unique(col)) > 100) {
+      if (length(unique(col)) > max_vals) {
         return(plot_ly() %>%
                  layout(title = "Error: Eines der ausgewählten Merkmale hat zu
                                  viele Faktorstufen um geplottet zu werden.",
@@ -135,14 +135,6 @@ plot_bivariate <- function(data, var1, var2) {
     # Count occurrences of each unique (x, y) pair and retain labels
     count(x, y, x_label, y_label, name = "count")
 
-  # Extract unique x and y values with labels for axis ticks
-  x_ticks <- plot_data %>%
-    distinct(x, x_label) %>%
-    arrange(x)
-  y_ticks <- plot_data %>%
-    distinct(y, y_label) %>%
-    arrange(y)
-
   # Create custom tooltip text
   plot_data <- plot_data %>%
     mutate(text = paste("X:", x_label, "<br>Y:", y_label, "<br>Count:", count))
@@ -160,16 +152,16 @@ plot_bivariate <- function(data, var1, var2) {
   ) %>%
     layout(
       title = paste("Bivariate Verteilung von", var1, "und", var2),
-      xaxis = list(
-        title = var1,
-        tickvals = x_ticks$x,
-        ticktext = x_ticks$x_label
-      ),
-      yaxis = list(
-        title = var2,
-        tickvals = y_ticks$y,
-        ticktext = y_ticks$y_label
-      ),
+    #   xaxis = list(
+    #     title = var1,
+    #     tickvals = ~x,
+    #     ticktext = ~x_label
+    #   ),
+    #   yaxis = list(
+    #     title = var2,
+    #     tickvals = ~y,
+    #     ticktext = ~y_label
+    #   ),
       hovermode = "closest"
     )
 
