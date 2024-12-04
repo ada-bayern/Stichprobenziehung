@@ -1,228 +1,167 @@
-source("modules/selection_probability_module.R")
-source("modules/stratification/strata_sizes.R")
-
-library(DT)
 library(shiny)
+library(DT)
+library(dplyr)
 
 # TODO: explanation
+# TODO: init with proportional values
+# TODO: actual sampling
 
-# Define UI
+source("modules/utils.R")
+
+# Define the UI for the stratified sampling module (in German, using snake_case)
 sample_ui <- function(id) {
-  ns <- NS(id)
+  ns <- NS(id) # Namespace for the module
+  titlePanel("Stichprobenziehung")
+  sidebarLayout(
+    sidebarPanel(
+      # Sample size input
+      numericInput(ns("sample_size"),
+                   "Gesamtstichprobengröße",
+                   value = 100,
+                   min = 1,
+                   max = 9999),
 
-  # Defining layout Sidebar allows defining parameter for selection
-  # probabilities. Main panel displays editable crosstable
-  fluidPage(
-    titlePanel("Stichprobenziehung definieren"),
-    sidebarLayout(
-      sidebarPanel(
-        fluidRow(
-          column(6, numericInput(ns("sample_size"),
-                                 "Stichprobengröße",
-                                 value = 100,
-                                 min = 1,
-                                 max = 99999,
-                                 width = "80px")),
-          column(6, align = "center",
-                 br(),
-                 textOutput(ns("realized_sample_size")))
-        ),
-        hr(),
-        # Tabset for defining sampling probabilities
-        uiOutput(ns("define_selection_probs_ui"))
+      # Toggle between sampling strategies
+      radioButtons(
+        ns("sampling_type"),
+        "Stichprobenstrategie",
+        choices = c("Garantierte Gesamtstichprobengröße" = "total_size",
+                    "Garantierte Mindestgröße pro Kategorie" = "category_size"),
+        selected = "total_size"
       ),
-      mainPanel(
-        radioButtons(ns("strat_table_select"),
-                     label = "Art der Stichprobenberechnung",
-                     choiceNames = c("Stichprobengröße garantiert",
-                                     "Kategoriengrößen garantiert"),
-                     choiceValues = c("sample_size", "category_size")),
-        DTOutput(ns("strata"))
-      )
+
+      # Dynamic UI for probability selection
+      tabsetPanel(ns("select_prob")),
+
+      # Button to trigger the sampling
+      actionButton(ns("sample_button"), "Stichprobe generieren")
+    ),
+
+    mainPanel(
+      h4("Zusammenfassung der Stichprobe"),
+      dataTableOutput(ns("sample_summary"))
     )
   )
 }
 
-# Define server logic
+# Define the server logic for the stratified sampling module
 sample_server <- function(id, strat_layers, presets) {
   moduleServer(id, function(input, output, session) {
+    ns <- session$ns
 
-    # Saving the data uploaded in another tab and passes to this module.
-    dataset <- reactiveVal(NULL)
-    observeEvent(strat_layers$data, {
-      dataset(strat_layers$data)
-    })
+    # Reactive value to store the sampled dataset
+    sampled_data <- reactiveVal()
 
-    # table of computed strata sizes (computed based on inputs)
-    strata <- reactiveVal(NULL)
-    display_strata <-
-      reactiveVal(data.frame(Hinweis = "Bitte alle Parameter eingeben,
-                                        um Kreuztabelle zu erstellen."))
+    # Reactive value to store current probabilities for sliders
+    slider_probs <- reactiveValues()
 
-    # sample size (computed based on user input)
-    sample_size <- reactiveVal(NULL)
-    realized_sample_size <- reactiveVal(NULL)
-
+    # Render probability selection UI dynamically
     observeEvent(input$sample_size, {
-      sample_size(input$sample_size)
-    })
+      req(strat_layers())
+      sample_size <- input$sample_size
 
-    # reads values from presets
-    observeEvent(presets(), {
-      ns <- session$ns
-      preset_sample_size <- presets()$sample_size
-      updateNumericInput(inputId = "sample_size", value = preset_sample_size)
+      # Clear any existing tabs
+      removeUI(selector = paste0("#", ns("select_prob"), " .tab-pane"),
+               multiple = TRUE)
 
-      # renders the tabs for the tabset panel in which the selection
-      # probabilities are defined
-      output$define_selection_probs_ui <- renderUI({
+      for (layer in strat_layers()) {
+        # get counts for each category
+        cat_counts <- table(layer$col)
 
-        tabs <-  lapply(strat_layers$ids, function(layer_id) {
-          col_name <- strat_layers$columns[[layer_id]]
-          tabPanel(title = col_name, value = layer_id,
-                   selection_probability_ui(ns(paste0("sp_", layer_id)),
-                                            col_name))
-        })
-        do.call(tabsetPanel, tabs)
-      })
+        # Create a new tab for each layer
+        new_tab <- tabPanel(
+          title = layer$name,
+          value = layer$id,
+          # actionButton(ns(paste0(layer$id, "_select_all")), 
+          #              "Alle auswählen"),
+          # actionButton(ns(paste0(layer$id, "_proportional")),
+          #              "Proportional zur Grundgesamtheit"),
+          unname(lapply(layer$uniq_cats, function(cat) {
+            sliderInput(
+              ns(paste0(layer$id, "_", cat, "_prob")),
+              label = paste("Wahrscheinlichkeit für", cat),
+              min = 0,
+              max = min(sample_size, cat_counts[[cat]]),
+              value = min(sample_size, cat_counts[[cat]]),
+              step = 1
+            )
+          }))
+        )
 
-      lapply(strat_layers$ids, function(layer_id) {
-        observe({
-          vals <- strat_layers$unique_vals[[layer_id]]
-          preset_sel_kind <- presets()$sel_kind[[layer_id]]
-          preset_params <- presets()$sel_params[[layer_id]]
-          req(vals)
-          ret <- selection_probability_server(paste0("sp_", layer_id), vals,
-                                              preset_sel_kind, preset_params)
-          observe({
-            strat_layers$sel_kind[[layer_id]] <- ret$kind
-            strat_layers$sel_params[[layer_id]] <- ret$vec
-          })
-        })
-      })
-
-      lapply(strat_layers$ids, function(id) {
-
-
-      })
-    })
-
-
-    # renders the tabs for the tabset panel in which the selection probabilities
-    # are defined
-    output$define_selection_probs_ui <- renderUI({
-      ns <- session$ns
-      tabs <-  lapply(strat_layers$ids, function(layer_id) {
-        col_name <- strat_layers$columns[[layer_id]]
-        tabPanel(title = col_name, value = layer_id,
-                 selection_probability_ui(ns(paste0("sp_", layer_id)),
-                                          col_name))
-      })
-      do.call(tabsetPanel, tabs)
-    })
-
-    # computes the unique values of each column in the categorized data set
-    observe({
-      for (id in strat_layers$ids){
-        strat_layers$unique_vals[[id]] <-
-          unique(strat_layers$cols_categorized[[id]])
+        # Add the new tab to the UI
+        insertTab(
+          session = session,
+          inputId = "select_prob",
+          tab = new_tab,
+          select = TRUE
+        )
       }
-    }, priority = 2)
+    })
 
-    # creating moduleservers for the selection probability logic and saving
-    # results
-    observe({
-      ns <- session$ns
-      lapply(strat_layers$ids, function(layer_id) {
-        observe({
-          vals <- strat_layers$unique_vals[[layer_id]]
-          req(vals)
-          ret <- selection_probability_server(paste0("sp_", layer_id), vals)
-          observe({
-            strat_layers$sel_kind[[layer_id]] <- ret$kind
-            strat_layers$sel_params[[layer_id]] <- ret$vec
-          })
-          print(strat_layers)
+    # Update sliders when "Alle auswählen" is toggled
+    observeEvent(strat_layers(), {
+      lapply(strat_layers(), function(layer) {
+        observeEvent(input[[paste0(layer$id, "_select_all")]], {
+          for (cat in layer$uniq_cats) {
+            updateSliderInput(
+              session,
+              paste0(layer$id, "_", cat, "_prob"),
+              value = 1
+            )
+          }
         })
       })
-    }, priority = 1)
+    })
 
+    # Update sliders when "Proportional zur Grundgesamtheit" is toggled
+    observeEvent(strat_layers(), {
+      lapply(strat_layers(), function(layer) {
+        observeEvent(input[[paste0(layer$id, "_proportional")]], {
+          # Calculate category proportions
+          cat_counts <- table(layer$col)
+          total_count <- length(layer$col)
+          cat_probs <- lapply(layer$uniq_cats,
+                              function(cat) cat_counts[[cat]] / total_count)
 
-    # Gathering the inputs for stratification size computation via package and
-    # putting inputs into named list for function call with do.call()
-    observe({
-      req(strat_layers$data, sample_size(), unlist(strat_layers$sel_kind),
-          length(strat_layers$sel_kind) == length(strat_layers$ids))
-      args <- list(
-        x = strat_layers$data,
-        sample_size = sample_size(),
-        strat_min = 3,
-        strat_names = unlist(colnames(strat_layers$data)),
-        ratio_types = unlist(strat_layers$sel_kind)
+          print(cat_probs)
+          # Update sliders with proportional values
+          for (cat in layer$uniq_cats) {
+            updateSliderInput(
+              session,
+              paste0(layer$id, "_", cat, "_prob"),
+              value = cat_probs[[cat]]
+            )
+          }
+        })
+      })
+    })
+
+    # Perform sampling when the button is clicked
+    observeEvent(input$sample_button, {
+      req(presets(), strat_layers())
+
+      data <- presets()
+      layers <- strat_layers()
+
+      # Collect probabilities set by the user
+      probabilities <- lapply(layers, function(layer) {
+        sapply(layer$uniq_cats, function(cat) {
+          input[[paste0(layer$id, "_", cat, "_prob")]]
+        })
+      })
+
+      # TODO: Implement sampling logic based on probabilities
+      sampled_data(data)
+    })
+
+    # Render the summary table
+    output$sample_summary <- renderDataTable({
+      req(sampled_data())
+      datatable(
+        sampled_data(),
+        options = list(pageLength = 10, autoWidth = TRUE),
+        rownames = FALSE
       )
-      ratios <- lapply(strat_layers$ids, function(id) {
-        strat_layers$sel_params[[id]]
-      })
-
-      names(ratios) <- strat_layers$columns
-      args <- c(args, ratios)
-      str <- do.call(strata_sizes, args)
-      print(nrow(str))
-      strata(str)
-    },
-    priority = 0)
-
-    # Creating the crosstable to render, which entails selecting relevant
-    # columns and renaming columns to German
-    observe({
-      req(strata())
-      strt <- strata()
-
-      if (input$strat_table_select == "sample_size") {
-        cols <- c("Stratum", "Size.Population", "Ratio.Population",
-                  "Size.MD", "Selection.Probability.MD")
-      } else {
-        cols <- c("Stratum", "Size.Population", "Ratio.Population",
-                  "Size.LP", "Selection.Probability.LP")
-      }
-
-      strt <- strt[, cols]
-      colnames(strt) <- c("Stratum", "Größe in Grundgesamtheit",
-                          "Anteil Grundgesamtheit", "Größe Stichprobe",
-                          "Auswahlwahrscheinlichkeit")
-      rss <- sum(strt$`Größe Stichprobe`)
-      realized_sample_size(rss)
-      display_strata(strt)
     })
-
-    # rendering the calculated strata sizes
-    output$strata <- renderDT({
-      options <- if (!is.null(strata()) && nrow(strata()) > 10)
-        list(dom = "ltpr", lengthMenu = c(10, 15, 20), pageLength = 10) else
-        list(dom = "ltr")
-
-      datatable(display_strata(),
-                class = "cell-border stripe",
-                editable = TRUE,
-                rownames = FALSE,
-                options = options)
-    })
-
-    output$realized_sample_size <- renderText({
-      paste("Realisierte Stichprobengröße:", realized_sample_size())
-    })
-
-
-    # persisting table edits
-    observeEvent(input$strata_cell_edit, {
-      row <- input$strata_cell_edit$row
-      col <- input$strata_cell_edit$col
-      str <- display_strata()
-      str[row, col] <- input$strata_cell_edit$value
-      display_strata(str)
-    })
-
-
-    return(list(strata = display_strata, sample_size = sample_size))
   })
 }

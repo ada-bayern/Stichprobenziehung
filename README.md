@@ -25,14 +25,7 @@ Run the App by typing the following into your R console:
 ```         
 shiny::runApp()
 ```
-
-## Data Requirements
-
--   Cols:
-
-    -   "Bezirk"
-
-    -   
+  
 
 ## For Developers
 
@@ -58,19 +51,15 @@ shiny::runApp()
 
 1.  Installationspezifikation und Dokumentation
 
--   [ ] get example data
--   [ ] installation
--   [ ] test run
+-   [x] get example data
+-   [x] installation
+-   [x] test run
 -   [ ] documentation
 
 2.  Neuartige Daten annehmen (für C-Verfahren)
 
--   [ ] generalization
+-   [x] generalization
 
 3.  Integration in Behördeninfrastruktur
 
 -   [ ] deployment
-
-## Freitag
-
--   Folien komplettieren

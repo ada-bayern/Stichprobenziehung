@@ -6,6 +6,9 @@
 
 library(shiny)
 
+
+# TODO: finish
+
 manual_ui <- function(id) {
   ns <- NS(id)
   fluidPage(

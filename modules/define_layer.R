@@ -1,6 +1,11 @@
 library(sortable)
 library(shiny)
 
+#' ### Imports
+#' * MAX_VAL
+#' * ERROR_MESSAGE
+source("modules/utils.R")
+
 # Define the module UI
 define_layer_ui <- function(id, col_options) {
   ns <- NS(id)
@@ -21,9 +26,12 @@ define_layer_ui <- function(id, col_options) {
         margin-top: 0px;
         margin-bottom: 15px;
       }
-    ")
-    ),
+    ")),
     tagList(
+      hr(),
+      actionButton(ns("apply_button"), label = "Anwenden"),
+      actionButton(ns("remove_button"), label = "Entfernen"),
+      hr(),
       h4(textOutput(ns("column_name"))),
       selectInput(ns("column_select"),
                   "Spalte auswählen:",
@@ -35,8 +43,6 @@ define_layer_ui <- function(id, col_options) {
       numericInput(ns("num_categories"),
                    "Anzahl der Kategorien",
                    value = 2, min = 2, step = 1),
-      hr(),
-      actionButton(ns("apply_button"), label = "Anwenden"),
       hr(),
       uiOutput(ns("def_categories_ui")),
     )
@@ -50,12 +56,17 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Reactive value to store the selected column
-    selected_column <- reactiveValues(name = NULL, data_type = NULL,
-                                      categories = list())
+    # Reactive value to store the selected column intermediately
+    selected_column <- reactiveValues(name = NULL,
+                                      data_type = NULL,
+                                      categories = c(),
+                                      delete = FALSE)
 
     # reactive value to store number of categories
     num_categories <- reactiveVal(NULL)
+
+    # reactive value that stores whether the continue button was pressed
+    continue <- reactiveVal(FALSE)
 
     pr_name <- reactiveVal(preset_name)
     pr_dt <- reactiveVal(preset_data_type)
@@ -101,21 +112,37 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
       }
     })
 
+    # handle continue button press
+    observeEvent(input$continue, {
+      continue(TRUE)
+    })
+    # handle condition to unpress continue button
+    observeEvent(input$column_select, {
+      continue(FALSE)
+    })
+
     # Update the column name display
     output$column_name <- renderText({
       req(input$column_select)
       input$column_select
     })
 
+    # Define UI for the category selection
     output$def_categories_ui <- renderUI({
-
       if (selected_column$data_type == "categorical") {
         vals <- unique(dataset()[[selected_column$name]])
 
-        if (length(vals) > 100 &&
-              all(is.numeric(dataset()[[selected_column$name]]))) {
-          HTML("Mehr als 100 numerische Werte, bitten wählen Sie die Option
-                Kategorisch.")
+        if (length(vals) > MAX_VAL && !continue()) {
+          if (all(is.numeric(dataset()[[selected_column$name]]))) {
+            HTML(paste("Das Merkmal enthält mehr als", MAX_VAL, "numerische
+                        Werte. Bitte wählen Sie die Option Numerisch"))
+          } else {
+            fluidRow(column(12,
+              HTML(ERROR_MESSAGE),
+              br(), br(),
+              actionButton(ns("continue"), "Fortfahren")
+            ))
+          }
         } else {
           fluidRow(
             column(6, bucket_list(
@@ -184,38 +211,40 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
 
           fluidRow(
             column(6,
-                   bucket_list(
-                     header = NULL,
-                     group_name = "bucket_list_group",
-                     class = c("default-sortable"),
-                     add_rank_list(
-                       text = "Werte in Spalte",
-                       labels = unselected_vals,
-                       input_id = ns("list_orignal_values")
-                     )
-                   )
+              bucket_list(
+                header = NULL,
+                group_name = "bucket_list_group",
+                class = c("default-sortable"),
+                add_rank_list(
+                  text = "Werte in Spalte",
+                  labels = unselected_vals,
+                  input_id = ns("list_orignal_values")
+                )
+              )
             ),
             column(6,
-                   lapply(1:num_categories(), function(n) {
-                     tagList(
-                       textInput(ns(paste0("name_cat_", n)),
-                                 width = "100%",
-                                 label = NULL,
-                                 value = cat_names[[n]],
-                                 placeholder = paste("Kategorie", n)),
-                       bucket_list(
-                         header = NULL,
-                         group_name = "bucket_list_group",
-                         orientation = "vertical",
-                         class = c("default-sortable"),
-                         add_rank_list(
-                           text = NULL,
-                           labels = categories[[n]],
-                           input_id = ns(paste0("list_cat_", n))
-                         ),
-                       )
-                     )
-                   })
+              lapply(1:num_categories(), function(n) {
+                tagList(
+                  textInput(
+                    ns(paste0("name_cat_", n)),
+                    width = "100%",
+                    label = NULL,
+                    value = cat_names[[n]],
+                    placeholder = paste("Kategorie", n)
+                  ),
+                  bucket_list(
+                    header = NULL,
+                    group_name = "bucket_list_group",
+                    orientation = "vertical",
+                    class = c("default-sortable"),
+                    add_rank_list(
+                      text = NULL,
+                      labels = categories[[n]],
+                      input_id = ns(paste0("list_cat_", n))
+                    ),
+                  )
+                )
+              })
             )
           )
         } else {
@@ -235,6 +264,7 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
     # Update category definitions
     observeEvent(input$apply_button, {
       req(selected_column$data_type)
+
       if (selected_column$data_type == "categorical") {
         categories <- lapply(1:num_categories(), function(i) {
           req(input[[paste0("list_cat_", i)]])
@@ -242,7 +272,7 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
         })
         names <- lapply(1:num_categories(), function(i) {
           name <- input[[paste0("name_cat_", i)]]
-          ifelse(!is.null(name), name, paste("Kategorie", i))
+          ifelse(name != "", name, paste("Kategorie", i))
         })
       } else {
         categories <- lapply(1:num_categories(), function(i) {
@@ -255,6 +285,17 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
       }
       names(categories) <- names
       selected_column$categories <- categories
+
+      updateActionButton(
+        session,
+        "apply_button",
+        label = "Angewendet",
+        disabled = TRUE
+      )
+    })
+
+    observeEvent(input$remove_button, {
+      selected_column$remove <- TRUE
     })
 
     # Return name of selected column.

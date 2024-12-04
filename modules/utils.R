@@ -5,46 +5,34 @@ library(plotly)
 library(dplyr)
 library(stringr)
 
-# TODO: filter numeric data
-# TODO: handle max_val
+# TODO: documentation
+
+# global constants
+MAX_VAL <- 100
+ERROR_MESSAGE <- paste("Das Merkmal enthält über", MAX_VAL, "verschiedene
+                        (teils) kategorische Werte. Die Darstellung solcher
+                        Merkmale kann einige Augenblicke dauern und
+                        unübersichtlich werden. Trotzdem fortfahren?")
 
 #' Filter data by values in a single column
-filter_data <- function(data, group_col, filter_vals) {
+filter_data <- function(data, group_col, filter_vals, numeric = FALSE) {
   if (is.null(filter_vals)) {
     return(data)
   }
 
   # filter data by selected grouping values
-  if (is.numeric(data[[group_col]])) {
-    # Extract bin range from filter_choices (binned labels like "0-10", etc.)
-
-    # Split the bin labels into start and end ranges
-    # (assumes label format "start-end")
-    # filter_ranges <- sapply(filter_vals, function(v) {
-    #   out <- strsplit(v, "-")
-    #   out <- sapply(out, function(num) as.numeric(trimws((num))))
-    #   out
-    # })
-
-    # # Filter the data based on numeric bins
-    # filtered_data <- data %>%
-    #   filter(
-    #     apply(data, 1, function(row) {
-    #       value <- row[[group_col]]
-    #       any(sapply(filter_ranges, function(range) {
-    #         value >= range[1] & value < range[2]
-    #       }))
-    #     })
-    #   )
-    return(data)
-
+  if (numeric) {
+    filtered_data <- data[
+      data[[group_col]] >= filter_vals$min &
+        data[[group_col]] <= filter_vals$max,
+    ]
   } else {
     filtered_data <- data[data[[group_col]] %in% filter_vals, ]
-    return(filtered_data)
   }
+  filtered_data
 }
 
-# Returns a summary of a data column of arbitrary type as a DT (datatable)
+#' Returns a summary of a data column of arbitrary type as a DT (datatable)
 summarise_col <- function(data, var) {
   column_data <- data[[var]]
   if (is.numeric(column_data)) {
@@ -63,26 +51,14 @@ summarise_col <- function(data, var) {
     summary_df <- data.frame(Message = "Error: Der Datentyp des ausgewählten
 																				Merkmals ist unbekannt.")
   }
-
   datatable(summary_df, options = list(dom = "t", paging = FALSE))
 }
 
-# Returns a plotly object displaying a distribution of a selected data column
-# of arbitrary type
+#' Returns a plotly object displaying a distribution of a selected data column
+#' of arbitrary type
 plot_univariate <- function(data, var) {
   # Get the selected column
   col <- data[[var]]
-
-  # Check whether any column has too many factor levels
-  if (is.factor(col) || is.character(col)) {
-    # Check unique values count
-    if (length(unique(col)) > 100) {
-      return(plot_ly() %>%
-               layout(title = "Error: Das ausgewählte Merkmal hat zu viele
-                               Faktorstufen um geplottet zu werden.",
-                      titlefont = list(color = "red")))
-    }
-  }
 
   # Check data type and render appropriate plot
   if (is.numeric(col)) {
@@ -100,25 +76,12 @@ plot_univariate <- function(data, var) {
            xaxis = list(title = var))
 }
 
-# Returns a plotly object displaying a bivariate distribution of two selected
-# data columns of arbitrary type with custom tooltips
+#' Returns a plotly object displaying a bivariate distribution of two selected
+#' data columns of arbitrary type with custom tooltips
 plot_bivariate <- function(data, var1, var2, max_vals = 100) {
   # Get the selected columns
   col1 <- data[[var1]]
   col2 <- data[[var2]]
-
-  # Check whether any column has too many factor levels
-  for (col in c(col1, col2)) {
-    if (is.factor(col) || is.character(col)) {
-      # Check unique values count
-      if (length(unique(col)) > max_vals) {
-        return(plot_ly() %>%
-                 layout(title = "Error: Eines der ausgewählten Merkmale hat zu
-                                 viele Faktorstufen um geplottet zu werden.",
-                        titlefont = list(color = "red")))
-      }
-    }
-  }
 
   # Prepare data for plotting
   plot_data <- data %>%
@@ -152,18 +115,69 @@ plot_bivariate <- function(data, var1, var2, max_vals = 100) {
   ) %>%
     layout(
       title = paste("Bivariate Verteilung von", var1, "und", var2),
-    #   xaxis = list(
-    #     title = var1,
-    #     tickvals = ~x,
-    #     ticktext = ~x_label
-    #   ),
-    #   yaxis = list(
-    #     title = var2,
-    #     tickvals = ~y,
-    #     ticktext = ~y_label
-    #   ),
+      xaxis = list(
+        title = var1,
+        showticklabels = FALSE
+        # tickvals = ~x,
+        # ticktext = ~x_label
+      ),
+      yaxis = list(
+        title = var2,
+        showticklabels = FALSE
+        # tickvals = ~y,
+        # ticktext = ~y_label
+      ),
       hovermode = "closest"
     )
 
   plot
+}
+
+#' Small function to get the names of all layers in a list of layers
+#' ### Args:
+#' * **collection**: list or vector of objects
+#' * **feature**: feature that all objects in the collection must have
+#' ### Returns
+#' list containing the feature for each object
+#' @export
+features <- function(collection, feature) {
+  r <- c()
+  for (obj in collection) {
+    r <- c(r, obj[[feature]])
+  }
+  r
+}
+
+#' Fasst Werte eines Vektors in Kategorien zusammen
+#'
+#' @name select_groups
+#' @param vector Vektor mit Werten, die kategorisiert werden sollen.
+#' @param categories Liste von Listen mit den neuen Kategorien und den Werten,
+#' aus denen diese erstellt werden sollen.
+#' @param other_cat Kategorie für Werte, die nicht in ´categories´ definiert
+#' werden. Default ist ´NA´.
+#' @returns Vektor der gleichen Länge mit den neuen Kategorien.
+#'
+#' @examples
+#' vektor <- c("Apfel", "Gurke", "Orange", "Paprika", "Snickers")
+#' kategorien <- c(Gemüse = c("Gurke", "Paprika"), Obst = c("Apfel", "Orange"))
+#' vektor_kategorisiert <- select_groups(vektor, kategorien, "weder noch")
+#'
+#' @export
+select_groups <- function(vector, categories, other_cat = NA) {
+  result <- rep(other_cat, length(vector))
+
+  for (i in seq_along(vector)) {
+    value <- vector[i]
+
+    # Check if the value belongs to any of the categories
+    for (category in names(categories)) {
+      if (value %in% categories[[category]]) {
+        result[i] <- category
+        break  # Exit the inner loop once a category is found
+      }
+    }
+  }
+
+  return(result)
 }

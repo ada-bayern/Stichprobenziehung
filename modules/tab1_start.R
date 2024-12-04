@@ -50,7 +50,7 @@ start_ui <- function(id) {
       # Preview
       mainPanel(
         h3("Datenvorschau"),
-        div(DTOutput(ns("csv_preview")),
+        div(dataTableOutput(ns("csv_preview")),
             style = "overflow-x: auto;")
       )
     )
@@ -62,7 +62,6 @@ start_server <- function(id) {
     # Reactive values to store uploaded data
     csv_data <- reactiveVal(NULL)
     final_data <- reactiveVal(NULL)
-    done <- reactiveVal(FALSE)
 
     # Event to handle CSV file upload when the button is clicked
     observeEvent(input$csv_upload_btn, {
@@ -72,10 +71,9 @@ start_server <- function(id) {
                        sep = input$csv_sep)        # Use selected separator
       csv_data(data)                      # Store the data in the reactive value
       final_data(data)            # Use another reactive value for selected data
-      done(TRUE)
     })
 
-    observe({
+    observeEvent(csv_data(), {
       req(csv_data())
       # Choose columns
       updatePickerInput(
@@ -92,7 +90,7 @@ start_server <- function(id) {
     })
 
     # Render the preview table for the uploaded CSV data
-    output$csv_preview <- renderDT({
+    output$csv_preview <- renderDataTable({
       req(final_data())
 
       datatable(final_data(),
@@ -100,8 +98,7 @@ start_server <- function(id) {
                 options = list(pageLength = 5))
     })
 
-    return(list(data = final_data,
-                done = done))
+    return(list(data = final_data))
                 # old_sample = old_sample,
                 # ident_primary = ident_primary,
                 # ident_secondary = ident_secondary
