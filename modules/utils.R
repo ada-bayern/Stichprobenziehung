@@ -141,11 +141,12 @@ plot_bivariate <- function(data, var1, var2, max_vals = 100) {
 #' list containing the feature for each object
 #' @export
 features <- function(collection, feature) {
-  r <- c()
-  for (obj in collection) {
-    r <- c(r, obj[[feature]])
-  }
-  r
+  unname(lapply(collection, function(obj) obj[[feature]]))
+#   r <- c()
+#   for (obj in collection) {
+#     r <- c(r, obj[[feature]])
+#   }
+#   r
 }
 
 #' Fasst Werte eines Vektors in Kategorien zusammen

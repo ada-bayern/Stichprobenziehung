@@ -1,5 +1,6 @@
 library(sortable)
 library(shiny)
+library(stringr)
 
 #' ### Imports
 #' * MAX_VAL
@@ -283,6 +284,7 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
           paste("Kategorie", i)
         })
       }
+      names <- lapply(names, function(n) str_replace_all(n, " ", "."))
       names(categories) <- names
       selected_column$categories <- categories
 

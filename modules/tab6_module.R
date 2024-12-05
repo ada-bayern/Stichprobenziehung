@@ -1,5 +1,6 @@
-# TODO: generic
-source(file.path("../aktenstichprobe/R", "strat_sample.R"))
+library(shiny)
+
+source("modules/stratification/strat_sample.R"))
 
 
 # Define UI

@@ -126,10 +126,9 @@ categories_server <- function(id, csv_data, presets) {
           name = name, # name of the variable
           data_type = dtype, # dtype of the variable
           categories = cats, # value-category mapping as a list of lists
-          uniq_cats = names(cats), # unique categories
           col = col_categorized, # categorized column
-          sel_kind = NULL, # needed for nextstep: sample_server
-          sel_params = NULL # needed for nextstep: sample_server
+          cat_counts = table(col_categorized), # counts for each category
+          ratios = NULL # needed for nextstep: sample_server
         )
         strat_layers(stl_tmp)
       })

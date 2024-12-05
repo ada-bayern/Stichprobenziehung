@@ -134,15 +134,16 @@ strata_sizes <- function(x, sample_size = 100, strat_min = 1, strat_names, ratio
       # Calculate proportions as proportion to category counts in data
       category_counts <- table(x[[var_name]])
       total_count <- sum(category_counts)
-      proportions[[var_name]] <- category_counts[category_names[[var_name]]] / total_count
+      proportions[[var_name]] <-
+        category_counts[category_names[[var_name]]] / total_count
     } else if (ratio_type == "population") {
       # Convert ratios relative to size in sample to ratios relative to population size
       category_counts <- table(x[[var_name]])
       total_count <- sum(category_counts)
       total_per_group <- (category_counts[category_names[[var_name]]] * proportions[[var_name]])
-      proportions[[var_name]] <- total_per_group /sample_size
+      proportions[[var_name]] <- total_per_group / sample_size
       prop_total <- sum(proportions[[var_name]], na.rm = TRUE)
-      if (prop_total > 1){
+      if (prop_total > 1) {
         warning("Ratios given are too high. Sampling this many data points relative to total category
                 size would result in sample larger than sample size.")
         proportions[[var_name]] <- proportions[[var_name]] / prop_total

@@ -6,7 +6,7 @@ library(shiny)
 
 
 # Define UI
-tab5ui <- function(id){
+tab5ui <- function(id) {
   ns <- NS(id)
 
   # Defining layout elements.Sidebar allows defining parameter for selection
@@ -57,7 +57,6 @@ tab5server <- function(id, strat_layers, presets) {
 
     observeEvent(input$sample_size, {
       sample_size(input$sample_size)
-      
     })
     
     # reads values from presets
@@ -136,13 +135,12 @@ tab5server <- function(id, strat_layers, presets) {
         })
       })
     }, priority = 1)
-    
-    
-    
-    # Gathering the inputs for stratification size computation via package and 
+
+
+    # Gathering the inputs for stratification size computation via package and
     # putting inputs into named list for function call with do.call()
     observe({
-      req(strat_layers$data, sample_size(), unlist(strat_layers$sel_kind), 
+      req(strat_layers$data, sample_size(), unlist(strat_layers$sel_kind),
           length(strat_layers$sel_kind) == length(strat_layers$ids))
       args <- list(
         x = strat_layers$data,
@@ -151,18 +149,18 @@ tab5server <- function(id, strat_layers, presets) {
         strat_names = unlist(colnames(strat_layers$data)),
         ratio_types = unlist(strat_layers$sel_kind)
       )
-      ratios <- lapply(strat_layers$ids, function(id){
+      ratios <- lapply(strat_layers$ids, function(id) {
         strat_layers$sel_params[[id]]
       })
-      
+
       names(ratios) <- strat_layers$columns
       args <- c(args, ratios)
       str <- do.call(strata_sizes, args)
       strata(str)
     },
     priority = 0)
-    
-    
+
+
     # Creating the crosstable to render, which entails selecting relevant columns
     # and renaming columns to German
     observe({
@@ -184,27 +182,25 @@ tab5server <- function(id, strat_layers, presets) {
       realized_sample_size(rss)
       display_strata(strt)
     })
-    
-    
+
     # rendering the calculated strata sizes
     output$strata <- renderDT({
-      
+
       options <- if (!is.null(strata()) && nrow(strata()) > 10) 
         list(dom = "ltpr", lengthMenu = c(10, 15, 20), pageLength = 10) else
         list(dom = "ltr")
-        
-      datatable(display_strata(), 
-                class = "cell-border stripe", 
+
+      datatable(display_strata(),
+                class = "cell-border stripe",
                 editable = TRUE,
                 rownames = FALSE,
                 options = options)
     })
-    
+
     output$realized_sample_size <- renderText({
       paste("Realisierte Stichprobengröße:", realized_sample_size())
     })
-    
-    
+
     # persisting table edits
     observeEvent(input$strata_cell_edit, {
       row <- input$strata_cell_edit$row
