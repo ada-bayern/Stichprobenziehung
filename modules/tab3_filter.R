@@ -2,8 +2,6 @@ library(shiny)
 library(DT)
 library(shinyWidgets)
 library(plotly)
-library(dplyr)
-library(stringr)
 
 #' ### Imports
 #' * plot_univariate
@@ -68,6 +66,12 @@ filter_server <- function(id, csv_data) {
     # reactive values to store currently selected features and data
     filtered_data <- reactiveVal(NULL)
     selected_col <- reactiveVal(NULL)
+    filter_vals <- reactiveVal(NULL)
+    all_vals <- reactiveVal(NULL)
+    numeric_filter <- reactiveVal(NULL)
+
+    # reactive values to store filters for documentation
+    filters <- reactiveVal(list())
 
     # reactive value to store whether a column is numeric or categorical
     num <- reactiveVal(NULL)
@@ -130,6 +134,8 @@ filter_server <- function(id, csv_data) {
             max = max
           )
         ))
+        all_vals(list(min = min, max = max))
+
       } else if (length(col_uniq) > MAX_VAL && !continue()) {
         selected_col(NULL)
         # render warning
@@ -148,45 +154,62 @@ filter_server <- function(id, csv_data) {
           multiple = TRUE,
           options = list(`actions-box` = TRUE)
         )
+        all_vals(col_uniq)
       }
       ui
     })
 
-    # apply filter from the numeric filter selector
+    # collect filter values from the numeric filter selector
     observeEvent(input$filter_selector_min | input$filter_selector_max, {
-      req(output_data(), selected_col(), input$filter_selector_min,
-          input$filter_selector_max)
+      req(input$filter_selector_min, input$filter_selector_max)
 
-      filter_vals <- list(min = input$filter_selector_min,
-                          max = input$filter_selector_max)
-      filtered_data(filter_data(
-        output_data(),
-        group_col = selected_col(),
-        filter_vals = filter_vals,
-        numeric = TRUE
-      ))
+      filter_vals(list(min = input$filter_selector_min,
+                       max = input$filter_selector_max))
+      numeric_filter(TRUE)
+      print(numeric_filter())
+    })
+    # collect filter values from the categorical filter selector
+    observeEvent(input$filter_selector_cat, {
+      filter_vals(input$filter_selector_cat)
+      numeric_filter(FALSE)
+      print(numeric_filter())
     })
 
-    # apply filter from the categorical filter selector
-    observeEvent(input$filter_selector_cat, {
-      req(output_data(), selected_col(), input$filter_selector_cat)
+    # apply filter
+    observeEvent(filter_vals(), {
+      req(output_data(), selected_col(), filter_vals())
 
-      filtered_data(filter_data(
+      d <- filter_data(
         output_data(),
         group_col = selected_col(),
-        filter_vals = input$filter_selector_cat,
-        numeric = FALSE
-      ))
+        filter_vals = filter_vals(),
+        numeric = numeric_filter()
+      )
+      filtered_data(d)
+      print(length(filtered_data()))
     })
 
     # apply filter and store it in reactive value
     observeEvent(input$filter_btn, {
+      req(filtered_data())
+
       output_data(filtered_data())
+
+      # store filter for replicability
+      filters(c(filters(), list(col = selected_col(),
+                                used_vals = filter_vals(),
+                                all_vals = all_vals(),
+                                type = ifelse(numeric_filter(),
+                                              "numeric",
+                                              "categorical"))))
     })
 
     # apply reset
     observeEvent(input$reset_btn, {
       output_data(csv_data())
+
+      # reset filter storage
+      filters(list())
     })
 
     # Render the column summary based on the selected column
@@ -211,6 +234,6 @@ filter_server <- function(id, csv_data) {
       fig
     })
 
-    return(list(data = output_data))
+    return(list(data = output_data, filters = filters))
   })
 }

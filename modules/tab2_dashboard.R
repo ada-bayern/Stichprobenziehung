@@ -1,10 +1,7 @@
 library(shiny)
-library(shinyjs)
 library(DT)
 library(shinyWidgets)
 library(plotly)
-library(dplyr)
-library(stringr)
 
 #' ### Imports
 #' * plot_univariate

@@ -1,10 +1,8 @@
 library(DT)
 library(shiny)
-library(shinydashboard)
 library(shinyWidgets)
-library(dplyr)
 
-# TODO: Kartenvorschau
+# TODO: messages in german?
 
 start_ui <- function(id) {
   ns <- NS(id)
@@ -34,7 +32,6 @@ start_ui <- function(id) {
                                  Tab = "\t"),
                      selected = ","),
         # Button to trigger upload
-        actionButton(ns("csv_upload_btn"), "Hochladen"),
         hr(color = "black"),
         pickerInput(
           inputId = ns("col_selector"),
@@ -44,7 +41,7 @@ start_ui <- function(id) {
           multiple = TRUE,
           options = list(`actions-box` = TRUE)
         ),
-        actionButton(ns("select_btn"), "Auswahl anwenden")
+        actionButton(ns("csv_upload_btn"), "Auswahl hochladen")
       ),
 
       # Preview
@@ -60,8 +57,18 @@ start_ui <- function(id) {
 start_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     # Reactive values to store uploaded data
+    done <- reactiveVal(FALSE)
     csv_data <- reactiveVal(NULL)
-    final_data <- reactiveVal(NULL)
+
+    observeEvent(input$csv_file, {
+      req(input$csv_file)                       # Ensure a CSV file is selected
+      data <- read.csv(input$csv_file$datapath, # Read the uploaded CSV file
+                       header = input$csv_header,  # Use header option from UI
+                       sep = input$csv_sep,        # Use selected separator
+                       nrows = 5)               # Only preview
+      csv_data(data)                      # Store the data in the reactive value
+      done(FALSE)
+    })
 
     # Event to handle CSV file upload when the button is clicked
     observeEvent(input$csv_upload_btn, {
@@ -69,8 +76,8 @@ start_server <- function(id) {
       data <- read.csv(input$csv_file$datapath, # Read the uploaded CSV file
                        header = input$csv_header,  # Use header option from UI
                        sep = input$csv_sep)        # Use selected separator
-      csv_data(data)                      # Store the data in the reactive value
-      final_data(data)            # Use another reactive value for selected data
+      csv_data(data[input$col_selector])        # Store selected data
+      done(TRUE)
     })
 
     observeEvent(csv_data(), {
@@ -84,21 +91,16 @@ start_server <- function(id) {
       )
     })
 
-    observeEvent(input$select_btn, {
-      cols <- input$col_selector
-      final_data(select(csv_data(), cols))
-    })
-
     # Render the preview table for the uploaded CSV data
     output$csv_preview <- renderDataTable({
-      req(final_data())
+      req(csv_data())
 
-      datatable(final_data(),
+      datatable(csv_data(),
                 class = "cell-border stripe",
                 options = list(pageLength = 5))
     })
 
-    return(list(data = final_data))
+    return(list(data = csv_data, done = done))
                 # old_sample = old_sample,
                 # ident_primary = ident_primary,
                 # ident_secondary = ident_secondary

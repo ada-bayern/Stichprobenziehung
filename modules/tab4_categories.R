@@ -1,6 +1,5 @@
 library(shiny)
 library(DT)
-library(dplyr)
 
 # TODO: presets...
 # TODO: unified modularization

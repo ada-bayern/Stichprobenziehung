@@ -46,8 +46,7 @@ manual_ui <- function(id) {
         tags$ul(
           tags$li("Achten Sie darauf, dass die Spaltennamen und Datenformate
                    korrekt sind."),
-          tags$li("# TODO: Fügen Sie Informationen zum Datenformat und eventuell
-                   erforderliche Vorverarbeitungen hinzu.")
+          tags$li("Das aktuelle Dateigrößenlimit beträgt **160MB**")
         ),
 
         h3("2. Datenübersicht"),
