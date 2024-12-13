@@ -1,15 +1,50 @@
+#' Module: CSV Data Upload Interface
+#'
+#' This module creates a user interface (UI) and corresponding server logic to
+#' facilitate uploading and handling CSV files in a Shiny application. It
+#' enables users to upload data files, configure input options, and preview
+#' data before proceeding with analysis or processing.
+#'
+#' Libraries:
+#' - Utilizes DT for rendering data tables, shiny for creating the app
+#'   structure, and shinyWidgets for enhanced UI components.
+#'
+#' UI Structure:
+#' - `start_ui`: Composes the UI for file upload, column selection, and data
+#'               preview.
+#'   - Sidebar: Contains controls for file upload, separator selection, header
+#'              indication, and column selection using a picker widget.
+#'   - Main Panel: Provides a table preview of the uploaded data.
+#'
+#' Server Functionality:
+#' - `start_server`: Implements the server-side logic for managing data upload
+#'                   and interaction.
+#'   - Reactive Values: Utilizes reactive values for maintaining state and data.
+#'   - File Management: Handles file reading based on UI specifications (header,
+#'                      separator).
+#'   - Data Preview: Allows user to preview a few rows of the uploaded CSV file.
+#'   - Column Selection: Offers a mechanism for choosing specific columns from
+#'                       the CSV.
+#'
+#' Functions and Variables:
+#' - `csv_data`: Holds the uploaded CSV data and updates upon file changes.
+#' - `done`: A reactive flag indicating whether the data upload process is
+#'           complete.
+#' - Event Observers: Reactively manage user interaction, such as file
+#'                    selection, and update the UI components accordingly.
+#' - `pickerInput`: Widget for selecting multiple columns from the dataset.
+
+# Load necessary libraries
 library(DT)
 library(shiny)
 library(shinyWidgets)
 
-# TODO: messages in german?
-
+# UI Function for CSV upload screen
 start_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
     titlePanel("Daten-Upload"),
-
-    # CSV-Upload
+    # Layout for sidebar and main panel
     sidebarLayout(
       # Sidebar for actions and options
       sidebarPanel(
@@ -31,20 +66,20 @@ start_ui <- function(id) {
                                  Semikolon = ";",
                                  Tab = "\t"),
                      selected = ","),
-        # Button to trigger upload
+        # PickerInput for selecting columns
         hr(color = "black"),
         pickerInput(
           inputId = ns("col_selector"),
           label = "Spaltenauswahl:",
-          choices = NULL,  # Placeholder, will be updated in the server
-          selected = NULL, # Placeholder, will be updated in the server
+          choices = NULL, # Placeholder, will be filled by server
+          selected = NULL, # Placeholder for default selection
           multiple = TRUE,
           options = list(`actions-box` = TRUE)
         ),
+        # Button to trigger upload action
         actionButton(ns("csv_upload_btn"), "Auswahl hochladen")
       ),
-
-      # Preview
+      # Main panel for data preview
       mainPanel(
         h3("Datenvorschau"),
         div(dataTableOutput(ns("csv_preview")),
@@ -54,35 +89,43 @@ start_ui <- function(id) {
   )
 }
 
+# Server function for handling CSV upload and column selection
 start_server <- function(id) {
   moduleServer(id, function(input, output, session) {
-    # Reactive values to store uploaded data
+    # Reactive values to manage the uploaded data state
     done <- reactiveVal(FALSE)
     csv_data <- reactiveVal(NULL)
-
+    
+    # Handle CSV file upload event
     observeEvent(input$csv_file, {
-      req(input$csv_file)                       # Ensure a CSV file is selected
-      data <- read.csv(input$csv_file$datapath, # Read the uploaded CSV file
-                       header = input$csv_header,  # Use header option from UI
-                       sep = input$csv_sep,        # Use selected separator
-                       nrows = 5)               # Only preview
-      csv_data(data)                      # Store the data in the reactive value
+      req(input$csv_file) # Ensure a file is chosen
+      
+      # Read the CSV file with specified input options
+      data <- read.csv(input$csv_file$datapath,
+                       header = input$csv_header,
+                       sep = input$csv_sep,
+                       nrows = 5) # Read a few lines for preview
+      
+      # Store the preview data
+      csv_data(data)
       done(FALSE)
     })
 
-    # Event to handle CSV file upload when the button is clicked
+    # Finalize upload and handle full data processing
     observeEvent(input$csv_upload_btn, {
-      req(input$csv_file)                       # Ensure a CSV file is selected
-      data <- read.csv(input$csv_file$datapath, # Read the uploaded CSV file
-                       header = input$csv_header,  # Use header option from UI
-                       sep = input$csv_sep)        # Use selected separator
-      csv_data(data[input$col_selector])        # Store selected data
+      req(input$csv_file) # Check that the file is selected
+      data <- read.csv(input$csv_file$datapath,
+                       header = input$csv_header,
+                       sep = input$csv_sep)
+      
+      # Store the selected column data
+      csv_data(data[input$col_selector])
       done(TRUE)
     })
 
+    # Update picker input with column names from the CSV
     observeEvent(csv_data(), {
       req(csv_data())
-      # Choose columns
       updatePickerInput(
         session,
         "col_selector",
@@ -91,18 +134,15 @@ start_server <- function(id) {
       )
     })
 
-    # Render the preview table for the uploaded CSV data
+    # Render data table for the CSV data preview
     output$csv_preview <- renderDataTable({
       req(csv_data())
-
       datatable(csv_data(),
                 class = "cell-border stripe",
                 options = list(pageLength = 5))
     })
-
+    
+    # Return outputs for any additional required context
     return(list(data = csv_data, done = done))
-                # old_sample = old_sample,
-                # ident_primary = ident_primary,
-                # ident_secondary = ident_secondary
   })
 }

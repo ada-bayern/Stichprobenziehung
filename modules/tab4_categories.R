@@ -119,15 +119,14 @@ categories_server <- function(id, csv_data, presets) {
         # add new layer information to output
         stl_tmp <- strat_layers()
         # VERY IMPORTANT: ~ communication protocol between this tab and the
-        # next one!! -> TODO: S4-class in utils.R?
+        # next ones!! -> TODO: S4-class in utils.R?
         stl_tmp[[layer_id]] <- list(
           id = layer_id, # id, which is also used for indexing in strat_layers
           name = name, # name of the variable
           data_type = dtype, # dtype of the variable
           categories = cats, # value-category mapping as a list of lists
           col = col_categorized, # categorized column
-          cat_counts = table(col_categorized), # counts for each category
-          ratios = NULL # needed for nextstep: sample_server
+          cat_counts = table(col_categorized) # counts for each category
         )
         strat_layers(stl_tmp)
       })

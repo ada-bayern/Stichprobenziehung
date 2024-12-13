@@ -2,21 +2,25 @@
 
 ## Requirements
 
--   R \>= 4.2
+- R \>= 4.1
 
 ## Set Up
 
-```         
+``` {bash}
 $ sudo apt install libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libgdal-dev
 ```
 
 Open the R console in RStudio or by typing `R` into your cmd-line. To install the required packages, type:
-
-```         
-> install.packages(c('shiny', 'ggplot2', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'tidyverse', 'sf', 'tinytex', 'sortable', 'DT', 'lpSolve', 'plotly', 'viridis'))
+``` {r}
+> install.packages(c('shiny', 'ggplot2', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'tidyverse', 'sf', 'tinytex', 'sortable', 'DT', 'lpSolve', 'plotly', 'viridis', 'rmarkdown'))
 ```
 
-This can take some minutes...
+This might take some minutes...
+
+To install the knittr that produces PDF reports execute the following command in the R console:
+``` {r}
+> tinytex::install_tinytex()
+```
 
 ## Run
 

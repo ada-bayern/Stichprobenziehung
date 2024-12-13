@@ -8,31 +8,29 @@ source("modules/utils.R")
 # Define UI
 overview_ui <- function(id) {
   ns <- NS(id)
-  fluidRow(
+  fluidPage(
     titlePanel("Überblick und Download"),
-    mainPanel(
-      # TODO
-      p("Hier können Sie die Dokumentation der Stichprobenziehung
-      herunterladen. Alle Angaben, die Sie getätigt haben, wurden gesichert
-      und werden in einer PDF-Datei herausgegeben. Neben der Dokumentation
-      können Sie auch die CSV-Dateien der Stichprobe herunterladen. Diese
-      besteht aus zwei Versionen: Eine enthält den kompletten Datensatz und
-      die zweite Version besteht nur aus den Datenpunkten, die auch ausgewählt
-      wurden."),
-      hr(),
-      actionButton(ns("sample_button"), "Stichprobe ziehen"),
-      hr(),
-      DTOutput(ns("sample_table"))
-    ),
-    sidebarPanel(
-      fluidRow(column(6, textInput(ns("ident_primary"), "Author-ID")),
-               column(6, textInput(ns("ident_secondary"), "Datensatz-ID"))),
-      actionButton(ns("create_rmd"), "Erstellen der Dokumentation"),
-      hr(),
-      downloadButton(ns("download_report"), "Dokumentation herunterladen"),
-      hr(),
-      downloadButton(ns("download_sample"),
-                     "Stichprobeninformationen herunterladen")
+    sidebarLayout(
+      sidebarPanel(
+        fluidRow(column(6, textInput(ns("id_name"), "Author-ID")),
+                 column(6, textInput(ns("id_data"), "Datensatz-ID"))),
+        downloadButton(ns("download_report"), "Dokumentation als PDF laden"),
+        hr(),
+        downloadButton(ns("load_sample_button"), "Stichprobe als CSV laden"),
+        br(), br(),
+        downloadButton(ns("load_dataset_button"),
+                       "Markierten Datensatz als CSV laden"),
+        br(), br(),
+        downloadButton(ns("download_sample"),
+                       "Stichprobeninformationen als RDS laden")
+      ),
+      mainPanel(
+        br(),
+        actionButton(ns("sample_button"), "Stichprobe ziehen"),
+        hr(),
+        div(dataTableOutput(ns("sample_table")),
+            style = "overflow-x: auto;")
+      )
     )
   )
 }
@@ -43,113 +41,51 @@ overview_server <- function(id, uploaded_data, filters, strat_layers, ratios,
   moduleServer(id, function(input, output, session) {
 
     sample <- reactiveVal(NULL)
+    marked_dataset <- reactiveVal(NULL)
 
-    ############################################################################
-    #### Create R-Markdown and list
-    ############################################################################
-    observeEvent(input$create_rmd, {
+    # Define download handler
+    output$download_report <- downloadHandler(
+      filename = function() {
+        paste("Dokumentation_Aktenstichprobe_", Sys.Date(), ".pdf", sep = "")
+      },
+      content = function(file) {
+        # Create a temporary R Markdown file
+        temp_report <- file.path(tempdir(), "report.Rmd")
 
-      fs::file_create("Dokumentation_Stichprobe.Rmd")
-      file_conn <- file("Dokumentation_Stichprobe.Rmd")
-      writeLines(
-        c(
-          "---",
-          #"title: Dokumentation der Stichprobe",
-          #"title: Dokumentation der Stichprobe",
-          "title: Dokumentation der Stichprobe",
-          "date: Erstellt am `r format(Sys.Date(), '%d.%m.%Y')`",
-          "author: '`r input$ident_primary`'",
-          "lang: de",
-          #"toc: true",
-          #"toc_depth: 1",
-          #"highlight: tango",
-          "output:",
-          "pdf_document:",
-          "df_print: kable",
-          "---",
-          "",
-          "## Informationen zum verwendeten Datensatz",
-          "```{r echo=FALSE}",
-          "input$ident_secondary",
-          "```",
-          "## Diese Spalte/n wurde/n bearbeitet um die Grundgesamtheit zu bestimmen.",
-          "```{r}",
-          "colnames(uploaded_data())",
-          "```",
-          # TODO?
-          # "## Diese Ausprägungen standen zur Verfügung, um die Grundgesamtheit zu bestimmen.",
-          # "```{r}",
-          # "value_choices()",
-          # "```",
-          "## Diese Ausprägungen wurde ausgewählt, um die Grundgesamtheit zu bestimmen.",
-          "```{r}",
-          "filters()",
-          "```",
-          "## Diese Spalte/n wurde/n zur neuen Gruppierung ausgewählt.",
-          "```{r}",
-          "features(strat_layers(), 'name')",
-          "```",
-          "## Hier sieht man die Datentyp/en der ausgewählen Spalte/n zur neuen Gruppierung.",
-          "```{r}",
-          "features(strat_layers(), 'data_type')",
-          "```",
-          "## Hier sieht man die neuen Kategorien der ausgewählen Spalte/n zur neuen Gruppierung.",
-          "```{r}",
-          "features(strat_layers(), 'categories')",
-          "```",
-          "## Hier sieht man ausgewählten Auswahlwahrscheinlichkeiten pro Stratum.",
-          "```{r}",
-          "ratios()",
-          "```",
-          "## Hier sieht man die Kreuztabelle.",
-          "```{r}",
-          "strata()",
-          "```",
-          "## Hier sieht man die Größe der Stichprobe.",
-          "```{r}",
-          "sample_size()",
-          "```"
-        ),
-        file_conn
-      )
-      close(file_conn)
+        file.copy("report.Rmd", temp_report, overwrite = TRUE)
 
-      #Render the R-Markdown file
-      render_report <- reactive({
-        # Render the R Markdown document
-        render("Dokumentation_Stichprobe.Rmd",
-               output_file = NULL,
-               output_format = "pdf_document")
-      })
-
-      # Define download handler
-      output$download_report <- downloadHandler(
-        filename = function() {
-          "Dokumentation_Stichprobe.pdf"  # Name of the downloaded file
-        },
-        content = function(file) {
-          # Knit the R Markdown document and save it to a file
-          rmarkdown::render("Dokumentation_Stichprobe.Rmd",
-                            output_format = "pdf_document",
-                            output_file = file)
-        }
-      )
-    })
-
-    output$text6 <- renderText({ # TODO
-      paste(strat_layers())
-      #paste("Bitte klicken Sie eine der beliebigen Objekte an, um die Auswahl der letzten Stichprobe anzuzeigen.")
-    })
+        # Knit the R Markdown document and save it to a file
+        rmarkdown::render(temp_report,
+                          output_format = "pdf_document",
+                          output_file = file,
+                          envir = new.env(parent = globalenv()),
+                          params = list(
+                            id_name = input$id_name,
+                            id_data = input$id_data,
+                            selected_cols = colnames(uploaded_data()),
+                            filters = filters(),
+                            strat_layers = strat_layers(),
+                            ratios = ratios(),
+                            strata = strata(),
+                            sample_size = sample_size()
+                          ))
+      },
+      contentType = "application/pdf"
+    )
 
     output$download_sample <- downloadHandler(
       filename = function() {
-        paste("Stichprobe", Sys.Date(), ".rds", sep = "")
+        paste("Aktenstichprobe_", Sys.Date(), ".rds", sep = "")
       },
       content = function(file) {
+        strl <- strat_layers()
+        for (l in strl) {
+          l$col <- NULL
+        }
         rds <- list(
           cols = colnames(uploaded_data()),
           filters = filters(),
-          strat_layers = strat_layers(),
+          strat_layers = strl,
           strata = strata(),
           sample_size = sample_size()
         )
@@ -160,18 +96,23 @@ overview_server <- function(id, uploaded_data, filters, strat_layers, ratios,
 
 
     observeEvent(input$sample_button, {
-      req(strat_layers(), nrow(strata()) > 1)
+      req(strat_layers(), nrow(strata()) > 0)
 
-      args <- list(data = data.frame(features(strat_layers(), "col")),
-                   strata_sizes = strata()[, "Größe Stichprobe"])
+      data <- data.frame(features(strat_layers(), "col"))
+      colnames(data) <- features(strat_layers(), "name")
 
-      strat_names <- lapply(strat_layers(), function(layer) {
-        names(layer$ratios)
-      })
-      
-      names(strat_names) <- features(strat_layers(), "name")
-      args <- c(args, strat_names)
-      smpl <- do.call(strat_sample, args) # TODO
+      smpl <- strat_sample(
+        data = data,
+        strata_sizes = strata()[, "Größe Stichprobe"],
+        cat_names = lapply(ratios(), names)
+      )
+      # store as dataset with extra binary column
+      dataset <- uploaded_data()
+      dataset$Stichprobe <- rep("nein", nrow(dataset))
+      dataset[rownames(smpl), "Stichprobe"] <- "ja"
+
+      # store as sample dataset
+      marked_dataset(dataset)
       smpl <- uploaded_data()[rownames(smpl), ]
       sample(smpl)
     })
@@ -180,5 +121,22 @@ overview_server <- function(id, uploaded_data, filters, strat_layers, ratios,
       datatable(sample())
     })
 
+    output$load_sample_button <- downloadHandler(
+      filename = function() {
+        paste("Aktenstichprobe_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(sample(), file)
+      }
+    )
+
+    output$load_dataset_button <- downloadHandler(
+      filename = function() {
+        paste("Datensatz_markiert_", Sys.Date(), ".csv", sep = "")
+      },
+      content = function(file) {
+        write.csv(marked_dataset(), file)
+      }
+    )
   })
 }

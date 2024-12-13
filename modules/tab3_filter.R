@@ -16,7 +16,7 @@ source("modules/utils.R")
 filter_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
-    titlePanel("Datenübersicht"),
+    titlePanel("Datenauswahl"),
 
     # Sidebar Panel
     sidebarLayout(
@@ -34,6 +34,9 @@ filter_ui <- function(id) {
         hr(),
         actionButton(ns("filter_btn"), "Filter  anwenden"),
         actionButton(ns("reset_btn"), "Alle Filter zurücksetzen"),
+        hr(),
+        tags$b("Aktuelle Filter:"),
+        tabsetPanel(id = ns("current_filters")),
         hr(),
         dataTableOutput(ns("column_summary"))  # Summary output
       ),
@@ -62,6 +65,7 @@ filter_ui <- function(id) {
 # Server function for dashboard module
 filter_server <- function(id, csv_data) {
   moduleServer(id, function(input, output, session) {
+    ns <- session$ns
 
     # reactive values to store currently selected features and data
     filtered_data <- reactiveVal(NULL)
@@ -166,13 +170,11 @@ filter_server <- function(id, csv_data) {
       filter_vals(list(min = input$filter_selector_min,
                        max = input$filter_selector_max))
       numeric_filter(TRUE)
-      print(numeric_filter())
     })
     # collect filter values from the categorical filter selector
     observeEvent(input$filter_selector_cat, {
       filter_vals(input$filter_selector_cat)
       numeric_filter(FALSE)
-      print(numeric_filter())
     })
 
     # apply filter
@@ -186,7 +188,6 @@ filter_server <- function(id, csv_data) {
         numeric = numeric_filter()
       )
       filtered_data(d)
-      print(length(filtered_data()))
     })
 
     # apply filter and store it in reactive value
@@ -195,13 +196,52 @@ filter_server <- function(id, csv_data) {
 
       output_data(filtered_data())
 
-      # store filter for replicability
-      filters(c(filters(), list(col = selected_col(),
-                                used_vals = filter_vals(),
-                                all_vals = all_vals(),
-                                type = ifelse(numeric_filter(),
-                                              "numeric",
-                                              "categorical"))))
+      # store filter
+      fltrs <- filters()
+      filter <- list(col = selected_col(),
+                     used_vals = filter_vals(),
+                     all_vals = all_vals(),
+                     type = ifelse(numeric_filter(), "numeric", "categorical"))
+      fltrs[[selected_col()]] <- filter
+      filters(fltrs)
+    })
+
+    tab_ids <- reactiveVal(list())
+    observeEvent(filters(), {
+      for (tid in tab_ids()){
+        removeTab(
+          session = session,
+          inputId = "current_filters",
+          target = tid
+        )
+      }
+      tab_ids(list())
+
+      for (filter in filters()) {
+        vals <- lapply(filter$used_vals, function(val) tags$li(val))
+        tab <- tabPanel(filter$col,
+          value = filter$col,
+          actionButton(ns(paste(filter$col, "_tab")), "Filter entfernen"),
+          vals
+        )
+        insertTab(
+          session = session,
+          inputId = "current_filters",
+          tab,
+          select = TRUE
+        )
+        tab_ids(c(tab_ids(), filter$col))
+      }
+    })
+
+    observe({
+      for (filter in filters()) {
+        observeEvent(input[[paste(filter$col, "_tab")]], {
+          fltrs <- filters()
+          fltrs[[filter$col]] <- NULL
+          filters(fltrs)
+        })
+      }
     })
 
     # apply reset

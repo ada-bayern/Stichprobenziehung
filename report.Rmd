@@ -1,0 +1,97 @@
+---
+title: Stichprobendokumentation
+date: Erstellt am `r format(Sys.Date(), "%d.%m.%Y")`
+#lang: de
+output: 
+  pdf_document:
+    df_print: kable
+params:
+  id_name: NA
+  id_data: NA
+  selected_cols: NA
+  filters: NA
+  strat_layers: NA
+  ratios: NA
+  strata: NA
+  sample_size: NA
+---
+
+
+## Stichprobenmetadaten
+```{r echo=FALSE}
+tibble(
+  Author = params$id_name,
+  Datensatz = params$id_data,
+  Stichprobengröße = params$sample_size
+)
+```
+## Merkmale
+Diese Merkmale wurden für die Grundgesamtheit ausgewählt:
+```{r echo=FALSE}
+tibble(
+  `Merkmale der Grundgesamtheit` = params$selected_cols
+)
+```
+## Merkmalsausprägungen
+Diese Merkmalsausprägungen wurden bewusst für die Grundgesamtheit gefiltert:
+```{r echo=FALSE}
+df <- data.frame(
+  Merkmal = c(),
+  Typ = c(),
+  `Benutzte Werte` = c()
+)
+
+
+for (filter in params$filters) {
+  df <- rbind(df, data.frame(
+    Merkmal = filter$col,
+    Typ = ifelse(filter$type == "categorical", "kat.", "num"),
+    `Benutzte Werte` = filter$used_vals
+  ))
+}
+
+tibble(df)
+```
+## Gruppierte Kategorien
+Bei numerischen Mermalen steht die jeweilige Zahl für die Obergrenze der Kategorie.
+```{r echo=FALSE}
+df <- data.frame(
+  Merkmal = c(),
+  `Gruppierte Kategorie` = c(),
+  `Zugeordnete Werte` = c()
+)
+
+
+for (layer in params$strat_layers) {
+  df <- rbind(df, data.frame(
+    Merkmal = layer$name,
+    Typ = ifelse(layer$data_type == "categorical", "kat.", "num"),
+    `Gruppierte Kategorie` = names(layer$categories),
+    `Zugeordnete Werte` = unlist(layer$categories)
+  ))
+}
+
+tibble(df)
+```
+## Gewählte Stichprobenanteile pro Kategorie
+```{r echo=FALSE}
+df <- data.frame(
+  Merkmal = c(),
+  Kategorie = c(),
+  Proportion = c()
+)
+
+for (name in names(params$ratios)) {
+  df <- rbind(df, data.frame(
+    Merkmal = name,
+    Kategorie = unlist(names(params$ratios[[name]])),
+    Proportion = unlist(params$ratios[[name]])
+  ))
+}
+
+tibble(df)
+```
+## Kreuztabelle der gruppierten Variablen
+```{r echo=FALSE}
+tibble(params$strata)
+```

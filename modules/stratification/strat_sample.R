@@ -17,13 +17,9 @@
 #'                   "Sonstiges"))
 #'
 #' @export
-strat_sample <- function(data, strata_sizes, ...) {
-
-  # Create a list of category names for each stratification variable
-  category_names <- list(...)
-
+strat_sample <- function(data, strata_sizes, cat_names) {
   # Create a vector of strata labels
-  strata_labels <- apply(expand.grid(category_names), 1, paste, collapse = ", ")
+  strata_labels <- apply(expand.grid(cat_names), 1, paste, collapse = "_")
 
   # Check if the length of strata_sizes matches the number of strata
   if (length(strata_sizes) != length(strata_labels)) {
@@ -32,12 +28,14 @@ strat_sample <- function(data, strata_sizes, ...) {
   }
 
   # Create a stratum identifier column in the data
-  vars <- names(category_names)
+  vars <- names(cat_names)
 
-  data$stratum <- apply(data[, vars], 1, paste, collapse = ", ")
-
+  data$stratum <- apply(data[, vars, drop = FALSE], 1, paste, collapse = "_")
   # Initialize an empty data frame to store the sample
   sample_data <- data.frame()
+
+  print(unique(data$stratum))
+  print(strata_labels)
 
   # Perform stratified sampling
   for (i in seq_along(strata_sizes)) {

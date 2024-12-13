@@ -1,46 +1,39 @@
 library(shiny)
 library(DT)
 
-# TODO: explanation
 # TODO: LP sampling
 # TODO: summary of single categories?
 
 source("modules/utils.R")
-source("modules/stratification/new.R")
-# source("modules/stratification/strata_sizes.R")
-# source("modules/stratification/strat_sample.R")
+source("modules/stratification/strata_sizes.R")
 
 # Define the UI for the stratified sampling module (in German, using snake_case)
 sample_ui <- function(id) {
   ns <- NS(id) # Namespace for the module
-  titlePanel("Stichprobenziehung")
-  sidebarLayout(
-    sidebarPanel(
-      # Sample size input
-      fluidRow(
-        column(6, numericInput(ns("sample_size"),
-                               "Stichprobengröße",
-                               value = 100,
-                               min = 1,
-                               max = 99999,
-                               width = "80px")),
-        column(6, align = "center",
-               br(),
-               textOutput(ns("realized_sample_size")))
+  fluidPage(
+    titlePanel("Stichprobenziehung"),
+    sidebarLayout(
+      sidebarPanel(
+        # Sample size input
+        numericInput(ns("sample_size"),
+                     "Stichprobengröße",
+                     value = 100,
+                     min = 1,
+                     max = 99999,
+                     width = "80px"),
+        uiOutput(ns("data_size")),
+        hr(),
+        # Dynamic UI for probability selection
+        tabsetPanel(id = ns("select_prob")),
+        hr(),
+        # Button to trigger the sampling
+        actionButton(ns("sample_button"), "Stichprobe generieren")
       ),
-      uiOutput(ns("data_size")),
-      hr(),
-      # Dynamic UI for probability selection
-      tabsetPanel(id = ns("select_prob")),
-      hr(),
-      # Button to trigger the sampling
-      actionButton(ns("sample_button"), "Stichprobe generieren")
-    ),
 
-    mainPanel(
-      h4("Zusammenfassung der Stichprobe"),
-      # Toggle between sampling strategies
-      # TODO: find problem
+      mainPanel(
+        h4("Zusammenfassung der Stichprobe"),
+        # Toggle between sampling strategies
+        # TODO: find problem
     #   radioButtons(
     #     ns("sampling_type"),
     #     "Stichprobenstrategie",
@@ -48,13 +41,14 @@ sample_ui <- function(id) {
     #                 "Garantierte Mindestgröße pro Kategorie" = "category_size"),
     #     selected = "sample_size"
     #   ),
-      dataTableOutput(ns("sample_summary"))
+        dataTableOutput(ns("sample_summary"))
+    )
     )
   )
 }
 
 # Define the server logic for the stratified sampling module
-sample_server <- function(id, strat_layers, presets) {
+sample_server <- function(id, strat_layers, data_size, presets) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -72,22 +66,16 @@ sample_server <- function(id, strat_layers, presets) {
     })
 
     # render UIs that depend an data size
-    observeEvent(strat_layers(), {
-      req(length(strat_layers()) > 0)
-
-      # Update default and limit of sample size input
-      layer1 <- strat_layers()[[names(strat_layers())[1]]]
-      data_size <- length(layer1$col)
-
+    observeEvent(data_size(), {
       output$data_size <- renderUI({
-        HTML(paste("Grundgesamtheit:", data_size, "Instanzen"))
+        HTML(paste("Grundgesamtheit:", data_size(), "Instanzen"))
       })
 
       updateNumericInput(
         session,
         inputId = "sample_size",
-        max = data_size,
-        value = min(c(100, data_size))
+        max = data_size(),
+        value = min(c(100, data_size()))
       )
     })
 
@@ -115,14 +103,14 @@ sample_server <- function(id, strat_layers, presets) {
           radioButtons(ns(paste0(layer$id, "sel_kind")),
             label = "Wahrscheinlichkeitsart",
             choices = c(
-              "Stichprobenanteil: (Diese Kategorie soll X% der Grundgesamtheit ausmachen)" = "population", # nolint
+              "Stichprobenanteil: (Diese Kategorie soll X% der Stichprobe ausmachen)" = "population", # nolint
               "Auswahlwahrscheinlichkeit: (X% dieser Kategorie sollen Teil der Stichprobe sein)" = "category" # nolint
             )
           ),
           hr(),
           # button to reset sliders to proportional
           actionButton(
-            ns(paste0(layer$id, "_proportional")), 
+            ns(paste0(layer$id, "_proportional")),
             label = "Proportional zum Datensatz"
           ),
           br(), br(),
@@ -210,13 +198,13 @@ sample_server <- function(id, strat_layers, presets) {
             ui <- fluidRow(column(12,
               hr(),
               span(HTML(paste(
-                "Die Auswahlwahrscheinlichkeiten sind so hoch, dass die
-                gewählte Stichprobegröße nicht mehr gewährleistet werden
-                kann: Die bei diesen Wahrscheinlichkeiten benötigte
-                Stichprobengöße von mindestens", req_sample_size, "ist
-                größer als die angegebene Stichprobengröße von",
-                sample_size(), ". Die Stichprobe wird dadurch größer,
-                als angegeben."
+                "Die Auswahlwahrscheinlichkeiten sind zu hoch: Die bei diesen
+                Wahrscheinlichkeiten benötigte Stichprobengöße von
+                mindestens", req_sample_size, "ist größer als die angegebene
+                Stichprobengröße von", sample_size(), ". Die Sichprobengröße
+                bleibt unverändert, jede gezogene Instanz wird Teil dieser
+                Kategorie sein, allerdings kann die Auswahlwahrscheinlichkeit
+                nicht eingehalten werden."
               )), style = "color:red")
             ))
           } else {
@@ -229,7 +217,7 @@ sample_server <- function(id, strat_layers, presets) {
 
     # Perform sampling when the button is clicked
     observeEvent(input$sample_button, {
-      req(length(strat_layers()) > 0)
+      req(strat_layers())
 
       # collect selected proportions
       ratios <- lapply(strat_layers(), function(layer) {
@@ -240,6 +228,7 @@ sample_server <- function(id, strat_layers, presets) {
           if (sel_kind == "category") {
             # convert to proportional to population
             r <- (r * layer$cat_counts[[cat]]) / length(layer$col)
+            r <- (min(c(r, 1)))
           }
           r
         })
@@ -266,6 +255,12 @@ sample_server <- function(id, strat_layers, presets) {
 
       # store ratios for later use
       ratios(ratios)
+
+      if (length(ratios) == 0) {
+        data <- data.frame(Gesamtheit = rep("Gesamtheit", 100))
+        ratios <- list(Gesamtheit = list(Gesamtheit = 1))
+        cat_counts <- list(Gesamtheit = list(Gesamtheit = 100))
+      }
 
       # define strata sizes
       strata(strata_sizes(data, ratios, cat_counts, 3, sample_size()))
@@ -310,9 +305,6 @@ sample_server <- function(id, strat_layers, presets) {
                 options = options)
     })
 
-    output$realized_sample_size <- renderText({
-      paste("Realisierte Stichprobengröße:", realized_sample_size())
-    })
 
 
     # persisting table edits

@@ -1,9 +1,52 @@
+#' Module: ADA Bayern Stichprobenziehung Shiny App
+#'
+#' This module creates a Shiny Application for the ADA Bayern
+#' Stichprobenziehung, a system for processing sample data.
+#' The application uses a dashboard layout with different tabs for various
+#' stages of data processing, including file upload, data viewing, filtering,
+#' categorizing, sampling, and overview.
+#'
+#' Libraries and Imports:
+#' - Utilizes libraries such as shiny, shinydashboard, shinythemes, dplyr, and
+#'   tinytex for UI creation and data processing.
+#' - Imports functions from external R scripts for modular tab handling
+#'   (`manual.R`, `tab1_start.R`, `tab2_dashboard.R`, `tab3_filter.R`,
+#'   `tab4_categories.R`, `tab5_sample.R`, `tab6_overview.R`).
+#'
+#' UI Structure:
+#' - Header: Contains the application title.
+#' - Sidebar: Provides navigation through menu items, each representing a
+#'            different processing stage.
+#' - Body: Displays content of currently selected tab, each managing UI for a
+#'         specific data process.
+#'
+#' Server Functionality:
+#' - Sets maximum file upload size.
+#' - Orchestrates communication between different server modules (tabs),
+#'   passing data and states through.
+#' - Contains logic for the "Next" button to advance through tabs sequentially.
+#'
+#' Important Variables/Functions:
+#' - `ui`: Defines the overall layout of UI components.
+#' - `server`: Manages the functional logic of the app including interactivity
+#'   and data management.
+#' - `dashboardHeader`, `dashboardSidebar`, `dashboardBody`: Define the main
+#'   sections of the Shiny dashboard (header, sidebar menu, main body).
+#' - Different tab server functions (`manual_server`, `start_server`, etc.) for
+#'   handling logic specific to each tab.
+#' - Reactive values are utilized to hold and manage state and data flows
+#'   between tabs.
+#' - `observeEvent`: Reacts to interactions with UI components, such as button
+#'   clicks.
+
+# Load necessary libraries
 library(shiny)
 library(shinydashboard)
 library(shinythemes)
 library(dplyr)
 library(tinytex)
 
+# Source external module scripts
 source("modules/manual.R")
 source("modules/tab1_start.R")
 source("modules/tab2_dashboard.R")
@@ -12,10 +55,13 @@ source("modules/tab4_categories.R")
 source("modules/tab5_sample.R")
 source("modules/tab6_overview.R")
 
+# Define dashboard header
 db_header <- dashboardHeader(
   title = "ADA Bayern Stichprobenziehung",
   titleWidth = 400
 )
+
+# Define dashboard sidebar with menu items
 db_sidebar <- dashboardSidebar(
   sidebarMenu(
     id = "menu",
@@ -27,8 +73,11 @@ db_sidebar <- dashboardSidebar(
     menuItem("Kategorien", tabName = "categories", icon = icon("icons")),
     menuItem("Stichprobe", tabName = "sample", icon = icon("table")),
     menuItem("Überblick", tabName = "overview", icon = icon("list-alt"))
-  )
+  ),
+  collapsed = TRUE
 )
+
+# Define dashboard body including tab items
 db_body <- dashboardBody(
   tabItems(
     tabItem("start", start_ui("start")),
@@ -42,6 +91,8 @@ db_body <- dashboardBody(
   hr(),
   actionButton("next_button", "Weiter")
 )
+
+# Construct UI for the Shiny app
 ui <- dashboardPage(
   db_header,
   db_sidebar,
@@ -49,26 +100,33 @@ ui <- dashboardPage(
   skin = "green"
 )
 
+# Define server logic required by Shiny app
 server <- function(input, output, session) {
+
+  # Set maximum request size for file uploads
   options(shiny.maxRequestSize = 160 * 1024^2)
+
+  # Call server logic for each tab module
   manual_server("manual")
   ret_start <- start_server("start")
   dashboard_server("dashboard", csv_data = ret_start$data)
   ret_filter <- filter_server("filter", csv_data = ret_start$data)
-  ret_categories <- categories_server("categories", csv_data = ret_filter$data,
+  ret_categories <- categories_server("categories",
+                                      csv_data = ret_filter$data,
                                       presets = reactiveVal(NULL))
   ret_sample <- sample_server("sample",
                               strat_layers = ret_categories$strat_layers,
+                              data_size = reactiveVal(nrow(ret_filter$data)),
                               presets = reactiveVal(NULL))
   overview_server("overview",
-                  uploaded_data = ret_start$csv_data,
+                  uploaded_data = ret_start$data,
                   filters = ret_filter$filters,
                   strat_layers = ret_categories$strat_layers,
                   ratios = ret_sample$ratios,
                   strata = ret_sample$strata,
                   sample_size = ret_sample$sample_size)
 
-  # Observe the Next button in the main server function
+  # Observer for "Next" button clicks to navigate through tabs
   observeEvent(input$next_button, {
     current_tab <- input$menu
     next_tab <- case_when(
@@ -76,7 +134,7 @@ server <- function(input, output, session) {
       current_tab == "start" & ret_start$done() ~ "dashboard",
       current_tab == "dashboard" ~ "filter",
       current_tab == "filter" ~ "categories",
-      current_tab == "categories" & length(ret_categories$strat_layers()) > 0 ~ "sample", # nolint
+      current_tab == "categories" ~ "sample",
       current_tab == "sample" ~ "overview",
       .default = current_tab
     )
@@ -84,4 +142,5 @@ server <- function(input, output, session) {
   })
 }
 
+# Run the Shiny application
 shinyApp(ui, server)
