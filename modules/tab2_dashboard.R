@@ -1,115 +1,133 @@
+#' Module: Dashboard for Data Overview and Visualization
+#'
+#' This module provides a Shiny dashboard interface for data visualization and
+#' exploration, utilizing interactive charting with Plotly for both univariate
+#' and bivariate data distributions. It allows users to select variables for
+#' visualization, apply filters, and view summary statistics of the data.
+#'
+#' Libraries:
+#' - Utilizes Shiny for creating the app interface, DT for rendering data
+#'   tables, plotly for compiling interactive plots, and shinyWidgets for
+#'   enhanced UI components.
+#'
+#' Imports:
+#' - From the modules/utils.R file, imports are plot_univariate, plot bivariate,
+#'   filter_data, summarise_col, MAX_VAL, and ERROR_MESSAGE.
+#'
+#' UI Structure:
+#' - `dashboard_ui`: Constructs a user interface with a sidebar and main panel
+#'                   for plotting and data summarization.
+#'   - Sidebar: Allows selecting main features and grouping features, applying
+#'              filters, and displays a summary table.
+#'   - Main Panel: Showcases distribution plots for both univariate and
+#'                 bivariate data.
+#'
+#' Server Functionality:
+#' - `dashboard_server`: Implements server-side logic to manage user
+#'   interaction, dynamically updating UI components, applying data filters, and
+#'   rendering plots.
+#'   - Utilizes reactive values and observers to manage state and user inputs.
+#'   - Automatically updates the UI based on changes in the reactive data.
+#'   - Handles log scale plotting, as well as visualization for both categorical
+#'     and numeric data.
+
+# Load necessary libraries
 library(shiny)
 library(DT)
 library(shinyWidgets)
 library(plotly)
 
-#' ### Imports
-#' * plot_univariate
-#' * plot_bivariate
-#' * filter_data
-#' * summarise_col
-#' * MAX_VAL
-#' * ERROR_MESSAGE
-source("modules/utils.R")
+# Source the necessary utility functions
+source("modules/helpers/utils.R")
 
-
-# UI function for dashboard module
+# UI function for the dashboard module
 dashboard_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
     titlePanel("Datenübersicht"),
-
-    # Sidebar Panel
+    # Sidebar Layout
     sidebarLayout(
       # Sidebar for actions and options
       sidebarPanel(
         selectInput(
           inputId = ns("column_selector"),
           label = "Hauptmerkmal:",
-          choices = NULL,  # Placeholder, will be updated in the server
+          choices = NULL, # Placeholder, filled by server
           selected = NULL
         ),
         uiOutput(ns("error_col")),
         selectInput(
           inputId = ns("column_selector2"),
           label = "Gruppierungsmerkmal:",
-          choices = NULL,  # Placeholder, will be updated in the server
+          choices = NULL, # Placeholder, filled by server
           selected = NULL
         ),
-        fluidRow(column(1), column(11,
-          uiOutput(ns("filter_selector")),
-        )),
+        fluidRow(
+          column(1),
+          column(11, uiOutput(ns("filter_selector")))
+        ),
         hr(),
-        DTOutput(ns("column_summary"))  # Summary output
+        DTOutput(ns("column_summary")) # Summary output
       ),
-
       # Main Panel for Plots
       mainPanel(
         box(
           title = "Merkmalsverteilung (Hauptmerkmal)",
           width = 12,
-          plotlyOutput(ns("dist_plot"),
-                       height = "80vh"),
+          plotlyOutput(ns("dist_plot"), height = "80vh"),
           switchInput(
             inputId = ns("log_scale"),
             label = "Log-Skala",
             value = FALSE,
             onLabel = "An",
             offLabel = "Aus"
-          ),
+          )
         ),
         hr(),
         box(
           title = "Bivariate Merkmalsverteilung",
           width = 12,
-          plotlyOutput(ns("bivariate_plot"),
-                       height = "80vh")
+          plotlyOutput(ns("bivariate_plot"), height = "80vh")
         )
       )
     )
   )
 }
 
-
-# Server function for dashboard module
+# Server function for the dashboard module
 dashboard_server <- function(id, csv_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # reactive values to store currently selected features and data
+    # Reactive values to store currently selected features and filtered data
     filtered_data <- reactiveVal(NULL)
     main_col <- reactiveVal(NULL)
     group_col <- reactiveVal(NULL)
+    num <- reactiveVal(NULL) # Indicator if the column is numeric
+    continue_col <- reactiveVal(FALSE) # Flag for continuation
+    continue_col2 <- reactiveVal(FALSE) # Flag for continuation
 
-    # reactive value to store whether a column is numeric or categorical
-    num <- reactiveVal(NULL)
-
-    # reactive values representing whether a continue button was pressed
-    continue_col <- reactiveVal(FALSE)
-    continue_col2 <- reactiveVal(FALSE)
-
-    # Observe and update the dropdown choices based on column names in csv_data
+    # Observe CSV data changes to update column dropdowns
     observeEvent(csv_data(), {
       updateSelectInput(
-        session,
-        "column_selector",
+        session, "column_selector",
         choices = names(csv_data())
       )
       updateSelectInput(
-        session,
-        "column_selector2",
+        session, "column_selector2",
         choices = names(csv_data())
       )
     })
 
-    # handle continue button presses
+    # Observe button presses for continuation
     observeEvent(input$continue_col, {
       continue_col(TRUE)
     })
     observeEvent(input$continue_col2, {
       continue_col2(TRUE)
     })
-    # handle unpress condition for continue buttons
+
+    # Revert continuation flags when new columns are selected
     observeEvent(input$column_selector, {
       continue_col(FALSE)
     })
@@ -117,141 +135,102 @@ dashboard_server <- function(id, csv_data) {
       continue_col2(FALSE)
     })
 
-    # handle columns with more than MAX_VAL categorical values
+    # Handle columns with more than MAX_VAL categorical values
     output$error_col <- renderUI({
       req(input$column_selector)
       col <- input$column_selector
       vals <- unique(csv_data()[[col]])
 
-      # if column contains too many categorical values and continue button was
-      # not pressed yet
       if (length(vals) > MAX_VAL && !is.numeric(vals) && !continue_col()) {
-        # return warning
+        # Warning for excessive categorical values
         ui <- fluidRow(column(12,
           HTML(ERROR_MESSAGE),
           br(), br(),
           actionButton(ns("continue_col"), "Fortfahren"),
           hr()
         ))
-        main_col(NULL)
+        main_col(NULL) # No selection until user proceeds
       } else {
-        # store current col in reactive value
-        main_col(col)
-        # return no error
+        main_col(col) # Store the current column
         ui <- hr()
       }
       ui
     })
 
-    # render the filter selector depending on the group column
+    # Render UI for the filter selector based on group column
     output$filter_selector <- renderUI({
       req(csv_data(), input$column_selector2)
-
       col_name <- input$column_selector2
       col <- csv_data()[[col_name]]
       col_uniq <- unique(col)
 
       if (is.numeric(col)) {
-        # store current col in reactive value
-        group_col(col_name)
-        # set flag for numeric column
-        num(TRUE)
-
-        min <- min(col)
-        max <- max(col)
-        # render Min-Max-Input
-        ui <- fluidRow(column(12,
-          numericInput(ns("filter_selector_min"),
-            "Minimum:",
-            value = min,
-            min = min,
-            max = max
-          ),
-          numericInput(ns("filter_selector_max"),
-            "Maximum:",
-            value = max,
-            min = min,
-            max = max
-          )
+        group_col(col_name) # Store group column
+        num(TRUE) # Set numeric flag
+        min_max_ui <- fluidRow(column(12,
+          numericInput(ns("filter_selector_min"), "Minimum:", value = min(col)),
+          numericInput(ns("filter_selector_max"), "Maximum:", value = max(col))
         ))
+        min_max_ui
       } else if (length(col_uniq) > MAX_VAL && !continue_col2()) {
+        # Warning for excessive categorical values
         group_col(NULL)
-        # render warning
-        ui <- fluidRow(column(12,
+        warning_ui <- fluidRow(column(12,
           HTML(ERROR_MESSAGE),
           br(), br(),
           actionButton(ns("continue_col2"), "Fortfahren")
         ))
+        warning_ui
       } else {
         group_col(col_name)
         num(FALSE)
-        # render categorical input
-        ui <- pickerInput(ns("filter_selector_cat"),
-          label = "Filter:",
-          choices = col_uniq,
-          selected = col_uniq,
-          multiple = TRUE,
-          options = list(`actions-box` = TRUE)
-        )
+        # Categorical filter selector
+        picker_ui <- pickerInput(ns("filter_selector_cat"),
+                                 label = "Filter:",
+                                 choices = col_uniq,
+                                 selected = col_uniq,
+                                 multiple = TRUE,
+                                 options = list(`actions-box` = TRUE))
+        picker_ui
       }
-      ui
     })
 
-    # apply filter from the numeric filter selector
+    # Apply filters for a numeric column
     observeEvent(input$filter_selector_min | input$filter_selector_max, {
       req(csv_data(), group_col(), input$filter_selector_min,
           input$filter_selector_max)
-
       filter_vals <- list(min = input$filter_selector_min,
                           max = input$filter_selector_max)
-      filtered_data(filter_data(
-        data = csv_data(),
-        group_col = group_col(),
-        filter_vals = filter_vals,
-        numeric = TRUE
-      ))
+      filtered_data(filter_data(csv_data(), group_col(), filter_vals, TRUE))
     })
 
-    # apply filter from the categorical filter selector
+    # Apply filters for a categorical column
     observeEvent(input$filter_selector_cat, {
       req(csv_data(), group_col(), input$filter_selector_cat)
-
-      filtered_data(filter_data(
-        data = csv_data(),
-        group_col = input$column_selector2,
-        filter_vals = input$filter_selector_cat,
-        numeric = FALSE
-      ))
+      filtered_data(
+        filter_data(csv_data(), group_col(), input$filter_selector_cat, FALSE)
+      )
     })
 
-    # Render the column summary based on the selected column
+    # Render summary table for the selected column
     output$column_summary <- renderDT({
       req(filtered_data(), main_col())
-
-      # Calculate and display summary based on data type
       summarise_col(filtered_data(), main_col())
     })
 
-    # Render the distribution plot based on selected column and data type
+    # Render univariate distribution plot
     output$dist_plot <- renderPlotly({
       req(filtered_data(), main_col())
-
-      # get distribution plot (numeric/categorical)
       fig <- plot_univariate(filtered_data(), main_col())
-
-      # Apply log scale to y-axis if switch is enabled
       if (input$log_scale) {
         fig <- fig %>% layout(yaxis = list(type = "log"))
       }
       fig
     })
 
-    # Render the bivariate behavior of two selected columns based on
-    # their data types
+    # Render bivariate distribution plot
     output$bivariate_plot <- renderPlotly({
       req(filtered_data(), main_col(), group_col())
-
-      # get distribution plot (numeric/categorical)
       plot_bivariate(filtered_data(), main_col(), group_col())
     })
   })

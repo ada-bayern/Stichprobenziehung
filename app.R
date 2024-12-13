@@ -1,4 +1,4 @@
-#' Module: ADA Bayern Stichprobenziehung Shiny App
+#' Main: ADA Bayern Stichprobenziehung Shiny App
 #'
 #' This module creates a Shiny Application for the ADA Bayern
 #' Stichprobenziehung, a system for processing sample data.
@@ -47,7 +47,7 @@ library(dplyr)
 library(tinytex)
 
 # Source external module scripts
-source("modules/manual.R")
+source("modules/tab0_manual.R")
 source("modules/tab1_start.R")
 source("modules/tab2_dashboard.R")
 source("modules/tab3_filter.R")
@@ -79,6 +79,14 @@ db_sidebar <- dashboardSidebar(
 
 # Define dashboard body including tab items
 db_body <- dashboardBody(
+  # Send signal to server that tab was closed
+  tags$script(
+    '
+    window.onbeforeunload = function() {
+      Shiny.setInputValue("tab_closed", true);
+    };
+    '
+  ),
   tabItems(
     tabItem("start", start_ui("start")),
     tabItem("dashboard", dashboard_ui("dashboard")),
@@ -139,6 +147,40 @@ server <- function(input, output, session) {
       .default = current_tab
     )
     updateTabItems(session, "menu", selected = next_tab)
+
+    if (current_tab == "overview") {
+      showModal(modalDialog(
+        title = "Schließen bestätigen",
+        "Sind Sie sicher, dass Sie die App schließen möchten?",
+        footer = tagList(
+          modalButton("Abbrechen"),
+          actionButton("confirm_close", "Ja, App schließen")
+        )
+      ))
+    }
+
+  })
+
+  # Change Next button to Close button in the last tab
+  observeEvent(input$menu, {
+    if (input$menu == "overview") {
+      updateActionButton(
+        session = session,
+        inputId = "next_button",
+        label = "Schließen"
+      )
+    }
+  })
+
+  # Close App by user command
+  observeEvent(input$confirm_close, {
+    removeModal()
+    stopApp("App durch Nutzer*in geschlossen.")
+  })
+  observeEvent(input$tab_closed, {
+    removeModal()
+    # TODO: save RDS in tmp folder to load later
+    stopApp("App durch Nutzer*in geschlossen.")
   })
 }
 

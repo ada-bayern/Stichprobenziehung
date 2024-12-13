@@ -95,17 +95,17 @@ start_server <- function(id) {
     # Reactive values to manage the uploaded data state
     done <- reactiveVal(FALSE)
     csv_data <- reactiveVal(NULL)
-    
+
     # Handle CSV file upload event
     observeEvent(input$csv_file, {
       req(input$csv_file) # Ensure a file is chosen
-      
+
       # Read the CSV file with specified input options
       data <- read.csv(input$csv_file$datapath,
                        header = input$csv_header,
                        sep = input$csv_sep,
                        nrows = 5) # Read a few lines for preview
-      
+
       # Store the preview data
       csv_data(data)
       done(FALSE)
@@ -117,7 +117,7 @@ start_server <- function(id) {
       data <- read.csv(input$csv_file$datapath,
                        header = input$csv_header,
                        sep = input$csv_sep)
-      
+
       # Store the selected column data
       csv_data(data[input$col_selector])
       done(TRUE)
@@ -141,7 +141,7 @@ start_server <- function(id) {
                 class = "cell-border stripe",
                 options = list(pageLength = 5))
     })
-    
+
     # Return outputs for any additional required context
     return(list(data = csv_data, done = done))
   })
