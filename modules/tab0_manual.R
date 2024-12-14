@@ -46,39 +46,42 @@ manual_ui <- function(id) {
       tags$ul(
         tags$li("Navigieren Sie zum Tab 'Daten-Upload'."),
         tags$li("Wählen Sie Ihre CSV-Datei aus und laden Sie sie hoch, indem
-                  Sie die Schaltfläche 'CSV-Datei auswählen' verwenden."),
+                Sie die Schaltfläche 'CSV-Datei auswählen' verwenden."),
         tags$li("Nutzen Sie das Optionsfeld, um anzugeben, ob die erste
-                  Zeile der Datei als Kopfzeile verwendet wird."),
+                Zeile der Datei als Kopfzeile verwendet wird."),
         tags$li("Wählen Sie den entsprechenden Trennzeichen aus Komma,
-                  Semikolon oder Tabulator.")
+                Semikolon oder Tabulator.")
       ),
       p("Datenvorschau und weitere Hinweise:"),
       tags$ul(
         tags$li("Nachdem die Datei ausgewählt ist, wird eine Vorschau der
-                  Daten angezeigt. Nutzen Sie dies, um die Korrektheit der
-                  Daten sicherzustellen."),
+                Daten angezeigt. Nutzen Sie dies, um die Korrektheit der
+                Daten sicherzustellen."),
         tags$li("Die Vorschau zeigt standardmäßig die ersten fünf Zeilen der
-                  Datei."),
+                Datei."),
         tags$li("Wählen Sie unter 'Spaltenauswahl' die spezifischen Spalten
-                  aus, die für die Analyse verwendet werden sollen."),
+                aus, die für die Analyse verwendet werden sollen."),
         tags$li("Klicken Sie auf 'Auswahl hochladen', um die ausgewählten
-                  Spalten zu speichern. Die gesamten Daten werden nun für
-                  die weitere Analyse bereitgestellt. In der Datenvorschau
-                  ist nun sichtbar, dass sich die Anzahl der Reihen verändert
-                  hat."),
+                Spalten zu speichern. Die gesamten Daten werden nun für
+                die weitere Analyse bereitgestellt. In der Datenvorschau
+                ist nun sichtbar, dass sich die Anzahl der Reihen verändert
+                hat."),
         tags$li("Stellen Sie sicher, dass die Dateigröße das Limit von 250 MB
-                  nicht überschreitet und dass das Format korrekt ist, um
-                  erfolgreiche Datenverarbeitung zu gewährleisten.")
+                nicht überschreitet und dass das Format korrekt ist, um
+                erfolgreiche Datenverarbeitung zu gewährleisten."),
+        tags$li("Optional können Sie eine RDS-Datei mit den Einstellungen
+                der letzten Stichprobenziehung laden. Dieses Feature unterliegt
+                allerdings noch Fehlern, vor allem im Abschnitt 'Kategorien'.")
       ),
 
       h3("2. Datenansicht"),
       h4("Dashboard zur Datenübersicht und Visualisierung"),
       p("Dieser Abschnitt bietet ein Dashboard für die Datenvisualisierung und
-          -exploration mithilfe von für interaktiven Plots univariate
-          (eine Variable) und bivariate (zwei Variablen im Zusammenhang)
-          Datenverteilungen. Nutzer*innen können Variablen zur
-          Visualisierung auswählen, Filter anwenden und
-          Zusammenfassungsstatistiken der Daten einsehen."),
+        -exploration mithilfe von für interaktiven Plots univariate
+        (eine Variable) und bivariate (zwei Variablen im Zusammenhang)
+        Datenverteilungen. Nutzer*innen können Variablen zur
+        Visualisierung auswählen, Filter anwenden und
+        Zusammenfassungsstatistiken der Daten einsehen."),
       tags$ul(
         tags$li("Navigieren Sie zu den Reitern im Seitenpanel, um Haupt- und
                 Gruppierungsmerkmale auszuwählen."),
@@ -192,7 +195,7 @@ manual_ui <- function(id) {
                 Es wird empfohlen die Kategorien zu benennen, um die Übersicht
                 zu wahren."),
         tags$li("Beachten Sie, dass jede Spalte nur in einer Schichtungsebene
-                  verwendet werden kann."),
+                verwendet werden kann."),
         tags$li("Sollten Sie keine Schicht definieren, wird in den nöchsten
                 Schritten eine Zufallsstichprobe gezogen.")
       ),
