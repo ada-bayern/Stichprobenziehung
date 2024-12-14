@@ -54,7 +54,8 @@ start_ui <- function(id) {
           accept = c("text/csv",
                      "text/comma-separated-values,text/plain",
                      ".csv"),
-          buttonLabel = "Suchen"
+          buttonLabel = "Suchen",
+          placeholder = "Keine Datei ausgewählt"
         ),
         hr(),
         # Option to indicate if the first row contains headers
@@ -76,7 +77,10 @@ start_ui <- function(id) {
           choices = NULL, # Placeholder, will be filled by server
           selected = NULL, # Placeholder for default selection
           multiple = TRUE,
-          options = list(`actions-box` = TRUE)
+          options = list(`actions-box` = TRUE,
+                         `deselect-all-text` = "Alle abwählen",
+                         `select-all-text` = "Alle auswählen",
+                         `none-selected-text` = "Keine ausgewählt")
         ),
         # Button to trigger upload action
         actionButton(ns("csv_upload_btn"), "Auswahl hochladen"),
@@ -84,8 +88,9 @@ start_ui <- function(id) {
         hr(),
         fileInput(ns("rds_file"),
           "Optional: Stichprobeneinstellungen (RDS) auswählen",
-          accept = c("rds"),
-          buttonLabel = "Suchen"
+          accept = c(".rds", ".RDS"),
+          buttonLabel = "Suchen",
+          placeholder = "Keine Datei ausgewählt"
         ),
         uiOutput(ns("rds_response"))
       ),

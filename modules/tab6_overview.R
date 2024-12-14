@@ -84,12 +84,15 @@ overview_server <- function(id, uploaded_data, sample_data, settings) {
         # Create a temporary R Markdown file
         temp_report <- file.path(tempdir(), "report.Rmd")
         file.copy("report.Rmd", temp_report, overwrite = TRUE)
+        params <- settings()
+        params$id_name <- input$id_name
+        params$id_data <- input$id_data
         # Knit the R Markdown document and save it to a file
         rmarkdown::render(temp_report,
           output_format = "pdf_document",
           output_file = file,
           envir = new.env(parent = globalenv()),
-          params = settings()
+          params = params
         )
       },
       contentType = "application/pdf"

@@ -8,7 +8,7 @@ output:
 params:
   id_name: NA
   id_data: NA
-  selected_cols: NA
+  cols: NA
   filters: NA
   strat_layers: NA
   ratios: NA
@@ -29,7 +29,7 @@ tibble(
 Diese Merkmale wurden für die Grundgesamtheit ausgewählt:
 ```{r echo=FALSE}
 tibble(
-  `Merkmale der Grundgesamtheit` = params$selected_cols
+  `Merkmale der Grundgesamtheit` = params$col
 )
 ```
 ## Merkmalsausprägungen

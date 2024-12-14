@@ -170,7 +170,10 @@ filter_server <- function(id, csv_data, presets) {
           choices = col_uniq,
           selected = col_uniq,
           multiple = TRUE,
-          options = list(`actions-box` = TRUE)
+          options = list(`actions-box` = TRUE,
+                         `deselect-all-text` = "Alle abwählen",
+                         `select-all-text` = "Alle auswählen",
+                         `none-selected-text` = "Keine ausgewählt")
         )
       }
     })

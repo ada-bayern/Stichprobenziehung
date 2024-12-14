@@ -168,31 +168,32 @@ dashboard_server <- function(id, csv_data) {
       if (is.numeric(col)) {
         group_col(col_name) # Store group column
         num(TRUE) # Set numeric flag
-        min_max_ui <- fluidRow(column(12,
+        fluidRow(column(12,
           numericInput(ns("filter_selector_min"), "Minimum:", value = min(col)),
           numericInput(ns("filter_selector_max"), "Maximum:", value = max(col))
         ))
-        min_max_ui
       } else if (length(col_uniq) > MAX_VAL && !continue_col2()) {
         # Warning for excessive categorical values
         group_col(NULL)
-        warning_ui <- fluidRow(column(12,
+        fluidRow(column(12,
           HTML(ERROR_MESSAGE),
           br(), br(),
           actionButton(ns("continue_col2"), "Fortfahren")
         ))
-        warning_ui
       } else {
         group_col(col_name)
         num(FALSE)
         # Categorical filter selector
-        picker_ui <- pickerInput(ns("filter_selector_cat"),
-                                 label = "Filter:",
-                                 choices = col_uniq,
-                                 selected = col_uniq,
-                                 multiple = TRUE,
-                                 options = list(`actions-box` = TRUE))
-        picker_ui
+        pickerInput(ns("filter_selector_cat"),
+          label = "Filter:",
+          choices = col_uniq,
+          selected = col_uniq,
+          multiple = TRUE,
+          options = list(`actions-box` = TRUE,
+                         `deselect-all-text` = "Alle abwählen",
+                         `select-all-text` = "Alle auswählen",
+                         `none-selected-text` = "Keine ausgewählt")
+        )
       }
     })
 
