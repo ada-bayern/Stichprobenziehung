@@ -47,7 +47,7 @@ source("modules/helpers/utils.R")
 filter_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
-    titlePanel("Datenauswahl"),
+    titlePanel("Datenfilterung"),
     # Sidebar Layout for actions and data selection
     sidebarLayout(
       sidebarPanel(
@@ -68,12 +68,13 @@ filter_ui <- function(id) {
         tags$b("Aktuelle Filter:"),
         tabsetPanel(id = ns("current_filters")),
         hr(),
+        tags$b("Kennwerte:"),
         dataTableOutput(ns("column_summary")) # Displays column summary
       ),
       # Main Panel for data visualization
       mainPanel(
         box(
-          title = "Merkmalsverteilung (Haputmerkmal)",
+          title = "Merkmalsverteilung",
           width = 12,
           plotlyOutput(ns("dist_plot"), height = "80vh"),
           switchInput(
@@ -90,7 +91,7 @@ filter_ui <- function(id) {
 }
 
 # Server function for managing data filters and visualization
-filter_server <- function(id, csv_data) {
+filter_server <- function(id, csv_data, presets) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -101,6 +102,9 @@ filter_server <- function(id, csv_data) {
     all_vals <- reactiveVal(NULL)
     numeric_filter <- reactiveVal(NULL)
     filters <- reactiveVal(list()) # Store applied filters
+    observeEvent(presets(), {
+      filters(presets()$filters)
+    })
     num <- reactiveVal(NULL) # Identify numeric vs categorical columns
     continue <- reactiveVal(FALSE) # Continuation flag
     output_data <- reactiveVal(NULL) # Output data store
@@ -197,7 +201,6 @@ filter_server <- function(id, csv_data) {
     # Store filter on application
     observeEvent(input$filter_btn, {
       req(filtered_data())
-      output_data(filtered_data())
 
       # Store filter details
       fltrs <- filters()
@@ -216,12 +219,17 @@ filter_server <- function(id, csv_data) {
         removeTab(session = session, inputId = "current_filters", target = tid)
       }
       tab_ids(list())
+      out_data <- csv_data()
       for (filter in filters()) {
-        vals <- lapply(filter$used_vals, function(val) tags$li(val))
+        # Filter data
+        out_data <- filter_data(out_data, filter$col, filter$used_vals,
+                                filter$type == "numeric")
+
+        # Define tab UI
         tab <- tabPanel(filter$col,
           value = filter$col,
-          actionButton(ns(paste(filter$col, "_tab")), "Filter entfernen"),
-          vals
+          actionButton(ns(paste0(filter$col, "_rmtab")), "Filter entfernen"),
+          tableOutput(ns(paste0(filter$col, "_vals")))
         )
         insertTab(
           session = session,
@@ -231,22 +239,45 @@ filter_server <- function(id, csv_data) {
         )
         tab_ids(c(tab_ids(), filter$col))
       }
+      output_data(out_data)
     })
 
-    # Observe removal actions for filters
-    observe({
-      for (filter in filters()) {
-        observeEvent(input[[paste(filter$col, "_tab")]], {
-          fltrs <- filters()
-          fltrs[[filter$col]] <- NULL
-          filters(fltrs)
-        })
-      }
+    # On tab switch
+    observeEvent(input$current_filters, {
+      cur_tab <- input$current_filters
+
+      # Render value table
+      output[[paste0(cur_tab, "_vals")]] <- renderTable({
+        filter <- filters()[[cur_tab]]
+        # Create filter view
+        if (filter$type == "numeric") {
+          df <- data.frame(
+            Grenze = names(filter$used_vals),
+            Werte = unlist(filter$all_vals),
+            Filter = unlist(filter$used_vals)
+          )
+        } else {
+          df <- data.frame(
+            Werte = unlist(filter$all_vals),
+            Filter = unlist(lapply(filter$all_vals,
+                                    function(val) val %in% filter$used_vals))
+          )
+        }
+        df
+      })
+
+      # Observe removal actions for filters
+      observeEvent(input[[paste0(cur_tab, "_rmtab")]], {
+        fltrs <- filters()
+        fltrs[[cur_tab]] <- NULL
+        filters(fltrs)
+      })
     })
 
     # Apply reset for all filters
     observeEvent(input$reset_btn, {
       output_data(csv_data()) # Reset output data
+      filtered_data(output_data())
       filters(list()) # Clear filter storage
     })
 

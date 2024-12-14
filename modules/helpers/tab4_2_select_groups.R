@@ -1,4 +1,4 @@
-#' Categorizes `vector`` according to mapping `categories`
+#' Categorizes categorical `vector` according to mapping `categories`
 #'
 #' @param vector Vector of values that should be categorized
 #' @param categories List of lists representing a mapping between values and

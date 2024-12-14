@@ -40,10 +40,9 @@
 library(shiny)
 library(DT)
 
-# TODO: Add presets...
-
 # Import necessary functions and variables
 source("modules/helpers/tab4_1_define_layer.R")
+source("modules/helpers/tab4_2_select_groups.R")
 source("modules/helpers/utils.R")
 
 
@@ -83,33 +82,113 @@ categories_ui <- function(id) {
 }
 
 # Define server logic for Categories module
-categories_server <- function(id, csv_data, presets) {
+categories_server <- function(id, dataset, presets) {
   moduleServer(id, function(input, output, session) {
-
-    # Reactive value for storing uploaded data
-    dataset <- reactiveVal(NULL)
-
-    # Update dataset when csv_data changes
-    observeEvent(csv_data(), {
-      dataset(csv_data())
-    })
-
-    # Reactive value for stratification layers
-    strat_layers <- reactiveVal(list())
+    ns <- session$ns
 
     # Reactive value for tracking the number of stratification layers
     tab_num <- reactiveVal(0)
+
+    # Reactive value for stratification layers
+    strat_layers <- reactiveVal(list())
+    strat_layer_servers <- reactiveVal(list())
+
+    # Fill strat_layers and UI with presets
+    observeEvent(presets(), {
+      str_layer_servers <- list()
+      for (s in presets()$strat_layers) {
+        # Create new UI for defining layer
+        tab_num(tab_num() + 1)
+        layer_id <- paste0("layer_", tab_num())
+        unselected_cols <- setdiff(
+          colnames(dataset()),
+          features(presets()$strat_layers, "name")
+        )
+
+        # Create tab for stratification layer UI
+        new_def_layer_ui <- tabPanel(
+          title = paste0("Schicht ", tab_num()),
+          value = ns(paste0("panel_def_", layer_id)),
+          define_layer_ui(ns(paste0("def_", layer_id)), unselected_cols)
+        )
+
+        # Insert new tab into panel for layer configurations
+        insertTab(
+          inputId = "strata_rename_input_ui",
+          new_def_layer_ui,
+          select = TRUE
+        )
+
+        # Handle output from layer server logic
+        server <- define_layer_server(paste0("def_", layer_id),
+          dataset,
+          preset_name = s$name,
+          preset_data_type = s$data_type,
+          preset_categories = s$categories
+        )
+        str_layer_servers[[layer_id]] <- server
+      }
+      strat_layer_servers(c(strat_layer_servers(), str_layer_servers))
+    })
+
+    observe({
+      req(strat_layer_servers())
+
+      for (layer_id in names(strat_layer_servers())) {
+        server <- strat_layer_servers()[[layer_id]]
+        # Process stratification layer details once defined
+        observeEvent(server$categories, {
+          req(length(server$categories) > 0)
+
+          # Extract layer information
+          name <- server$name
+          dtype <- server$data_type
+          cats <- server$categories
+
+          # Categorize column based on data type
+          col_categorized <- switch(
+            dtype,
+            "numeric" = cut(dataset()[[name]], breaks = c(0, cats),
+                            right = FALSE, include.lowest = TRUE),
+            select_groups(dataset()[[name]], cats, NA)
+          )
+
+          # Update stratification layers list
+          strat_layers_new <- strat_layers()
+          strat_layers_new[[layer_id]] <- list(
+            id = layer_id,
+            name = name,
+            data_type = dtype,
+            categories = cats,
+            col = col_categorized,
+            cat_counts = table(col_categorized)
+          )
+          strat_layers(strat_layers_new)
+        })
+
+        # Allow for removal of stratification layers
+        observeEvent(server$remove, {
+          if (server$remove) {
+            strat_layers(strat_layers()[names(strat_layers()) != layer_id])
+            removeTab(
+              inputId = "strata_rename_input_ui",
+              target = ns(paste0("panel_def_", layer_id))
+            )
+          }
+        })
+      }
+    })
+
 
     # Adding a new stratification layer
     observeEvent(input$add_strat_layer_button, {
       req(dataset())
 
       # Create new UI for defining layer
-      ns <- session$ns
       tab_num(tab_num() + 1)
       layer_id <- paste0("layer_", tab_num())
       unselected_cols <- setdiff(
-        colnames(csv_data()),
+        colnames(dataset()),
         features(strat_layers(), "name")
       )
 
@@ -128,48 +207,8 @@ categories_server <- function(id, csv_data, presets) {
       )
 
       # Handle output from layer server logic
-      dl_out <- define_layer_server(paste0("def_", layer_id), dataset)
-
-      # Process stratification layer details once defined
-      observeEvent(dl_out$categories, {
-        req(length(dl_out$categories) > 0)
-
-        # Extract layer information
-        name <- dl_out$name
-        dtype <- dl_out$data_type
-        cats <- dl_out$categories
-
-        # Categorize column based on data type
-        col_categorized <- switch(
-          dtype,
-          "numerical" = cut(csv_data()[[name]], breaks = c(0, cats),
-                            right = FALSE, include.lowest = TRUE),
-          select_groups(csv_data()[[name]], cats, NA)
-        )
-
-        # Update stratification layers list
-        strat_layers_new <- strat_layers()
-        strat_layers_new[[layer_id]] <- list(
-          id = layer_id,
-          name = name,
-          data_type = dtype,
-          categories = cats,
-          col = col_categorized,
-          cat_counts = table(col_categorized)
-        )
-        strat_layers(strat_layers_new)
-      })
-
-      # Allow for removal of stratification layers
-      observeEvent(dl_out$remove, {
-        if (dl_out$remove) {
-          strat_layers(strat_layers()[names(strat_layers()) != layer_id])
-          removeTab(
-            inputId = "strata_rename_input_ui",
-            target = ns(paste0("panel_def_", layer_id))
-          )
-        }
-      })
+      server <- define_layer_server(paste0("def_", layer_id), dataset)
+      strat_layer_servers(c(strat_layer_servers(), list(layer_id = server)))
     })
 
     # Update column selection for cross table preview based on layers
@@ -181,7 +220,6 @@ categories_server <- function(id, csv_data, presets) {
 
     # Output stratification layer action buttons
     output$strat_layer_buttons_ui <- renderUI({
-      ns <- session$ns
       lapply(strat_layers(), function(layer) {
         actionButton(ns(paste0("button_", layer$id)), label = layer$name)
       })
@@ -189,7 +227,6 @@ categories_server <- function(id, csv_data, presets) {
 
     # Switch to corresponding stratification tab when button is clicked
     observeEvent(strat_layers(), {
-      ns <- session$ns
       lapply(strat_layers(), function(layer) {
         observeEvent(input[[paste0("button_", layer$id)]], {
           updateTabsetPanel(inputId = "strata_rename_input_ui",

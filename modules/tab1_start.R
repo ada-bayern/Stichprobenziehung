@@ -50,10 +50,12 @@ start_ui <- function(id) {
       sidebarPanel(
         # Input for file upload
         fileInput(ns("csv_file"),
-                  "CSV-Datei auswählen",
-                  accept = c("text/csv",
-                             "text/comma-separated-values,text/plain",
-                             ".csv")),
+          "Datensatz (CSV) auswählen",
+          accept = c("text/csv",
+                     "text/comma-separated-values,text/plain",
+                     ".csv"),
+          buttonLabel = "Suchen"
+        ),
         hr(),
         # Option to indicate if the first row contains headers
         checkboxInput(ns("csv_header"),
@@ -77,7 +79,14 @@ start_ui <- function(id) {
           options = list(`actions-box` = TRUE)
         ),
         # Button to trigger upload action
-        actionButton(ns("csv_upload_btn"), "Auswahl hochladen")
+        actionButton(ns("csv_upload_btn"), "Auswahl hochladen")#,
+        # hr(),
+        # fileInput(ns("rds_file"),
+        #   "Optional: Stichprobeneinstellungen (RDS) auswählen",
+        #   accept = c("rds"),
+        #   buttonLabel = "Suchen"
+        # ),
+        # uiOutput(ns("rds_response"))
       ),
       # Main panel for data preview
       mainPanel(
@@ -95,6 +104,7 @@ start_server <- function(id) {
     # Reactive values to manage the uploaded data state
     done <- reactiveVal(FALSE)
     csv_data <- reactiveVal(NULL)
+    rds_data <- reactiveVal(NULL)
 
     # Handle CSV file upload event
     observeEvent(input$csv_file, {
@@ -142,7 +152,40 @@ start_server <- function(id) {
                 options = list(pageLength = 5))
     })
 
+    # observeEvent(input$rds_file, {
+    #   rds <- readRDS(input$rds_file$datapath)
+    #   valid <- TRUE
+
+    #   if (is.list(rds)) {
+    #     ui <- span(HTML(paste0(
+    #       "Stichprobeneinstellungen erfolgreich geladen"
+    #     )), style = "color:green")
+    #     settings <- c("cols", "filters", "strat_layers", "ratios", "strata",
+    #                   "sample_size")
+    #     for (s in settings) {
+    #       if (!(s %in% names(rds))) {
+    #         ui <- span(HTML(paste0(
+    #           "Die Stichprobeneinstellungen in der RDS-Datei sind nicht valide
+    #           und können daher nicht verwendet werden. Die Einstellung '", s,
+    #           "' fehlt."
+    #         )), style = "color:red")
+    #         valid <- FALSE
+    #         break
+    #       }
+    #     }
+    #   } else {
+    #     ui <- span(HTML(paste0(
+    #       "Die Stichprobeneinstellungen in der RDS-Datei konnten nicht gelesen
+    #       werden."
+    #     )), style = "color:red")
+    #   }
+    #   output$rds_response <- renderUI(ui)
+    #   if (valid) {
+    #     rds_data(rds)
+    #   }
+    # })
+
     # Return outputs for any additional required context
-    return(list(data = csv_data, done = done))
+    return(list(data = csv_data, presets = rds_data, done = done))
   })
 }

@@ -87,6 +87,8 @@ db_body <- dashboardBody(
     };
     '
   ),
+  actionButton("next_button", "Weiter"),
+  hr(),
   tabItems(
     tabItem("start", start_ui("start")),
     tabItem("dashboard", dashboard_ui("dashboard")),
@@ -95,9 +97,7 @@ db_body <- dashboardBody(
     tabItem("sample", sample_ui("sample")),
     tabItem("overview", overview_ui("overview")),
     tabItem("manual", manual_ui("manual"))
-  ),
-  hr(),
-  actionButton("next_button", "Weiter")
+  )
 )
 
 # Construct UI for the Shiny app
@@ -112,28 +112,40 @@ ui <- dashboardPage(
 server <- function(input, output, session) {
 
   # Set maximum request size for file uploads
-  options(shiny.maxRequestSize = 160 * 1024^2)
+  options(shiny.maxRequestSize = 250 * 1024^2)
+
+  # Store settings of this session in reactive value
+  settings <- reactiveVal(list())
 
   # Call server logic for each tab module
   manual_server("manual")
   ret_start <- start_server("start")
   dashboard_server("dashboard", csv_data = ret_start$data)
-  ret_filter <- filter_server("filter", csv_data = ret_start$data)
+  ret_filter <- filter_server("filter",
+                              csv_data = ret_start$data,
+                              presets = ret_start$presets)
   ret_categories <- categories_server("categories",
-                                      csv_data = ret_filter$data,
-                                      presets = reactiveVal(NULL))
+                                      dataset = ret_filter$data,
+                                      presets = ret_start$presets)
   ret_sample <- sample_server("sample",
                               strat_layers = ret_categories$strat_layers,
                               data_size = reactiveVal(nrow(ret_filter$data)),
-                              presets = reactiveVal(NULL))
+                              presets = ret_start$presets)
   overview_server("overview",
                   uploaded_data = ret_start$data,
-                  filters = ret_filter$filters,
-                  strat_layers = ret_categories$strat_layers,
-                  ratios = ret_sample$ratios,
-                  strata = ret_sample$strata,
-                  sample_size = ret_sample$sample_size)
+                  settings = settings())
 
+  # Store settings in reactive value
+  observe({
+    settings(list(
+      cols = colnames(ret_start$data()),
+      filters = ret_filter$filters(),
+      strat_layers = ret_categories$strat_layers(),
+      ratios = ret_sample$ratios(),
+      strata = ret_sample$strata(),
+      sample_size = ret_sample$sample_size()
+    ))
+  })
   # Observer for "Next" button clicks to navigate through tabs
   observeEvent(input$next_button, {
     current_tab <- input$menu
@@ -143,7 +155,7 @@ server <- function(input, output, session) {
       current_tab == "dashboard" ~ "filter",
       current_tab == "filter" ~ "categories",
       current_tab == "categories" ~ "sample",
-      current_tab == "sample" ~ "overview",
+      current_tab == "sample" & !is.null(ret_sample$strata()) ~ "overview",
       .default = current_tab
     )
     updateTabItems(session, "menu", selected = next_tab)
@@ -168,6 +180,12 @@ server <- function(input, output, session) {
         session = session,
         inputId = "next_button",
         label = "Schließen"
+      )
+    } else {
+      updateActionButton(
+        session = session,
+        inputId = "next_button",
+        label = "Weiter"
       )
     }
   })

@@ -104,22 +104,27 @@ sample_server <- function(id, strat_layers, data_size, presets) {
 
     # Render UI elements that depend on data size
     observeEvent(data_size(), {
+      print(0)
       output$data_size <- renderUI({
         HTML(paste("Grundgesamtheit:", data_size(), "Instanzen"))
       })
 
+      # Get sample_size from presets if applcable, else 100
+      val <- presets()$sample_size
+      if (is.null(val)) {
+        val <- 100
+      }
       updateNumericInput(
         session,
         inputId = "sample_size",
         max = data_size(),
-        value = min(c(100, data_size()))
+        value = min(c(val, data_size()))
       )
     })
 
     # Render probability selection UI dynamically
     observeEvent(strat_layers(), {
       req(strat_layers(), sample_size() > 0)
-
       # Remove all existing tabs
       for (tid in tab_ids()) {
         removeTab(
@@ -130,7 +135,9 @@ sample_server <- function(id, strat_layers, data_size, presets) {
       }
       tab_ids(list())
 
+      print(strat_layers())
       for (layer in strat_layers()) {
+        print(layer$id)
         # Create a new tab for each stratification layer
         new_tab <- tabPanel(
           title = layer$name,
@@ -153,13 +160,19 @@ sample_server <- function(id, strat_layers, data_size, presets) {
           br(), br(),
           # Probability slider for each category
           unname(lapply(names(layer$cat_counts), function(cat) {
+            # Get default value from presets (or use proportional if not appl.)
+            val <- presets()$ratios[[layer$name]][[cat]]
+            if (is.null(val)) {
+              val <- round(layer$cat_counts[[cat]] / length(layer$col), 2)
+            }
+
             sliderInput(
               ns(paste0(layer$id, "_", cat, "_prob")),
               label = paste0("Wahrscheinlichkeit für ", cat, " (",
                              layer$cat_counts[[cat]], " Instanzen)"),
               min = 0,
               max = 1,
-              value = round(layer$cat_counts[[cat]] / length(layer$col), 2),
+              value = val,
               step = 0.01
             )
           })),
@@ -179,10 +192,14 @@ sample_server <- function(id, strat_layers, data_size, presets) {
 
     # Implement slider logic
     observe({
+      print(strat_layers())
       for (layer in strat_layers()) {
         # Selection mode: either "population" or "category"
+        print(layer$id)
+        req(input[[paste0(layer$id, "sel_kind")]])
+        print(2)
         sel_kind <- input[[paste0(layer$id, "sel_kind")]]
-        req(sel_kind)
+        print(3)
 
         # Update sliders to proportional values
         observeEvent(input[[paste0(layer$id, "_proportional")]], {

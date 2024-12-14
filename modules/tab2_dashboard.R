@@ -67,6 +67,7 @@ dashboard_ui <- function(id) {
           column(11, uiOutput(ns("filter_selector")))
         ),
         hr(),
+        tags$b("Kennwerte (Hauptmerkmal):"),
         DTOutput(ns("column_summary")) # Summary output
       ),
       # Main Panel for Plots

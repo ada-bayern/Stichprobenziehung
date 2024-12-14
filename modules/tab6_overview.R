@@ -69,8 +69,7 @@ overview_ui <- function(id) {
 }
 
 # Define server logic for the overview module
-overview_server <- function(id, uploaded_data, filters, strat_layers, ratios,
-                            strata, sample_size) {
+overview_server <- function(id, uploaded_data, settings) {
   moduleServer(id, function(input, output, session) {
 
     # Create reactive values to hold sample data and marked datasets
@@ -91,16 +90,7 @@ overview_server <- function(id, uploaded_data, filters, strat_layers, ratios,
           output_format = "pdf_document",
           output_file = file,
           envir = new.env(parent = globalenv()),
-          params = list(
-            id_name = input$id_name,
-            id_data = input$id_data,
-            selected_cols = colnames(uploaded_data()),
-            filters = filters(),
-            strat_layers = strat_layers(),
-            ratios = ratios(),
-            strata = strata(),
-            sample_size = sample_size()
-          )
+          params = settings
         )
       },
       contentType = "application/pdf"
@@ -112,31 +102,27 @@ overview_server <- function(id, uploaded_data, filters, strat_layers, ratios,
         paste("Aktenstichprobe_", Sys.Date(), ".rds", sep = "")
       },
       content = function(file) {
-        strl <- strat_layers()
-        for (l in strl) {
+        settings$strat_layers <- lapply(settings$strat_layers, function(l) {
           l$col <- NULL
-        }
-        rds <- list(
-          cols = colnames(uploaded_data()),
-          filters = filters(),
-          strat_layers = strl,
-          strata = strata(),
-          sample_size = sample_size()
-        )
-        saveRDS(rds, file = file)
+          l
+        })
+        saveRDS(settings, file = file)
       }
     )
 
     # Observer for sample button click to execute sampling
     observeEvent(input$sample_button, {
-      req(strat_layers(), nrow(strata()) > 0)
-      data <- data.frame(features(strat_layers(), "col"))
-      colnames(data) <- features(strat_layers(), "name")
+      strat_layers <- settings$strat_layers
+      strata <- settings$strata
+      req(strat_layers, nrow(strata) > 0)
+      data <- data.frame(features(strat_layers, "col"))
+      colnames(data) <- features(strat_layers, "name")
       smpl <- strat_sample(
         data = data,
-        strata_sizes = strata()[, "Größe Stichprobe"],
-        cat_names = lapply(ratios(), names)
+        strata_sizes = strata[, "Größe Stichprobe"],
+        cat_names = lapply(settings$ratios, names)
       )
+      print(3)
       # Store as dataset with extra binary column
       dataset <- uploaded_data()
       dataset$Stichprobe <- rep("nein", nrow(dataset))
@@ -144,6 +130,7 @@ overview_server <- function(id, uploaded_data, filters, strat_layers, ratios,
       # Store as sample dataset
       marked_dataset(dataset)
       smpl <- uploaded_data()[rownames(smpl), ]
+      print(4)
       sample(smpl)
     })
 
