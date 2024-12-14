@@ -68,7 +68,7 @@ define_constraints <- function(ratios, cat_counts, strata_counts, strata_combos,
   # Constraint: Minimum number of category occurrences based on ratios
   constr$cat_min_vec <- unlist(ratios) * sample_size
   constr$cat_min_vec <- as.vector(pmin(constr$cat_min_vec, unlist(cat_counts)))
-  constr$cat_min_vec[is.na(constr$cat_min_vec)] <- constr$cat_min_vec
+  constr$cat_min_vec[is.na(constr$cat_min_vec)] <- 0
   constr$cat_min_dir <- rep(">=", num_cats)
 
   constr
@@ -103,7 +103,7 @@ lp_guess <- function(num_strata, constr) {
   constr_dir <- c(constr$strat_max_dir_vec,
                   constr$strat_min_dir,
                   constr$cat_min_dir)
-  print(constr_vec)
+
   lp_problem <- lp(direction = "min",
                    objective.in = rep(1, num_strata),
                    const.mat = mat_constr,
@@ -123,24 +123,30 @@ lp_guess <- function(num_strata, constr) {
 #' @return Vector of optimized strata sizes.
 lp_md_guess <- function(num_cats, num_strata, strat_min, sample_size, constr) {
   obj_fn_min_dist <- c(rep(0, num_strata), rep(1, num_cats))
-  cat_diag <- diag(num_cats)
-  constr_aux_lhs_part1 <- cbind(constr$cat_min_matrix, -1 * cat_diag)
+  empty_strat_cat_mat <- matrix(0, num_strata, num_cats)
+
+  # Auxiliary constraints
+  constr_aux_lhs_part1 <- cbind(constr$cat_min_matrix, -1 * diag(num_cats))
   constr_aux_dir_part1 <- rep("<=", num_cats)
-  constr_aux_rhs <- constr$cat_min_vec
-  constr_aux_lhs_part2 <- cbind(constr$cat_min_matrix, cat_diag)
+  constr_aux_lhs_part2 <- cbind(constr$cat_min_matrix, diag(num_cats))
   constr_aux_dir_part2 <- rep(">=", num_cats)
-  constr_strat_max_lhs <- cbind(diag(num_strata),
-                                matrix(0, num_strata, num_cats))
+  constr_aux_rhs <- constr$cat_min_vec
+
+  # Maximum strata count constraint
+  constr_strat_max_lhs <- cbind(diag(num_strata), empty_strat_cat_mat)
   constr_strat_max_dir <- rep("<=", num_strata)
   constr_strat_max_rhs <- constr$strat_max_vec
-  constr_strat_min_lhs <- cbind(diag(num_strata),
-                                matrix(0, num_strata, num_cats))
+
+  # Minimum strata count constraint
+  constr_strat_min_lhs <- cbind(diag(num_strata), empty_strat_cat_mat)
   constr_strat_min_dir <- rep(">=", num_strata)
   constr_strat_min_rhs <- pmin(constr$strat_max_vec, rep(strat_min, num_strata))
-  constr_sample_size_lhs <- matrix(c(rep(1, num_strata),
-                                     rep(0, num_cats)), nrow = 1)
+
+  # Sample size constraint
+  constr_sample_size_lhs <- matrix(c(rep(1, num_strata), rep(0, num_cats)), nrow = 1) # nolint
   constr_sample_size_dir <- c("=")
   constr_sample_size_rhs <- c(sample_size)
+
   constr_min_dist_lhs <- rbind(constr_aux_lhs_part1, constr_aux_lhs_part2,
                                constr_strat_max_lhs, constr_strat_min_lhs,
                                constr_sample_size_lhs)
@@ -166,12 +172,13 @@ lp_md_guess <- function(num_cats, num_strata, strat_min, sample_size, constr) {
 #'
 #' @param data Dataframe containing observations with columns representing
 #' strata.
-#' @param strata_names Names of strata to be evaluated.
+#' @param strata_combos Combinations of strata to be evaluated.
 #' @return Named vector with counts of each stratum.
-get_strata_counts <- function(data, strata_names) {
+get_strata_counts <- function(data, strata_combos) {
+  strata_names <- apply(strata_combos, 1, paste, collapse = "_")
+  strata_counts <- rep(0, length(strata_names))
   data$stratum <- apply(data, 1, paste, collapse = "_")
   counts_data <- table(data$stratum)
-  strata_counts <- rep(0, length(strata_names))
   names(strata_counts) <- strata_names
   strata_counts[strata_names] <- counts_data[strata_names]
   strata_counts[is.na(strata_counts)] <- 0
@@ -189,11 +196,10 @@ get_strata_counts <- function(data, strata_names) {
 #' @return Dataframe with stratum sizes and sampling proportions.
 strata_sizes <- function(data, ratios, cat_counts, strat_min, sample_size) {
   # Generate combinations of category names
-  strata_combos <- expand.grid(lapply(ratios, names))
-  strata_names <- apply(strata_combos, 1, paste, collapse = "_")
-  strata_counts <- get_strata_counts(data, strata_names)
+  strata_combos <- expand.grid(lapply(cat_counts, names))
+  strata_counts <- get_strata_counts(data, strata_combos)
 
-  # Get constraints for lp
+  # Get constraints for LP algorithm
   num_strata <- length(strata_counts)
   num_cats <- sum(lengths(ratios))
   constraints <- define_constraints(
@@ -231,9 +237,10 @@ strata_sizes <- function(data, ratios, cat_counts, strat_min, sample_size) {
     paste(names(x), x, sep = " = ", collapse = ", ")
   })
 
-  cat(stratum_col)
-  cat(strata_counts)
-  cat(strata_sizes_md)
+  print(stratum_col)
+  print(strata_counts)
+  print(strata_sizes_naive)
+  print(strata_sizes_md)
 
   out <- data.frame(
     Stratum = stratum_col,

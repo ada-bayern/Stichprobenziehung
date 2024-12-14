@@ -14,7 +14,6 @@
 #'         provided sizes.
 
 strat_sample <- function(data, strata_sizes, cat_names) {
-
   # Create a vector of stratum labels from the combination of category names
   strata_labels <- apply(expand.grid(cat_names), 1, paste, collapse = "_")
 
@@ -30,7 +29,6 @@ strat_sample <- function(data, strata_sizes, cat_names) {
 
   # Initialize a dataframe to store the resulting sample
   sample_data <- data.frame()
-
   # Perform stratified sampling for each stratum
   for (i in seq_along(strata_sizes)) {
     stratum <- strata_labels[i]

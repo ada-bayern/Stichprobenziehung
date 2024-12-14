@@ -97,84 +97,42 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
                                       data_type = NULL,
                                       categories = c(),
                                       remove = FALSE)
-    num_categories <- reactiveVal(NULL)
+    num_categories <- reactiveVal(0)
     continue <- reactiveVal(FALSE)
-    presets <- reactiveVal(FALSE)
+    categorize <- reactiveVal(FALSE)
+    pr_name <- reactiveVal(NULL)
+    pr_dt <- reactiveVal(NULL)
+    pr_cat <- reactiveVal(NULL)
+
+    # Load presets after dataset
+    observeEvent(dataset(), {
+      req(dataset())
+      pr_name(preset_name)
+      pr_dt(preset_name)
+      pr_cat(preset_categories)
+    })
 
     # Observe changes in presets and update UI
-    observe({
-      req(preset_name, preset_data_type, preset_categories)
-      presets(TRUE)
-      updateSelectInput(inputId = "column_select", selected = preset_name)
-      updateRadioButtons(inputId = "data_type", selected = preset_data_type)
-      selected_column$name <- preset_name
-      selected_column$data_type <- preset_data_type
+    observeEvent(pr_name(), {
+      if (pr_name() %in% colnames(dataset())) {
+        updateSelectInput(inputId = "column_select", selected = pr_name())
+        selected_column$name <- pr_name()
+      }
+    })
+    observeEvent(pr_dt(), {
+      if (pr_dt() %in% c("numeric", "categorical")) {
+        updateRadioButtons(inputId = "data_type", selected = pr_dt())
+        selected_column$data_type <- pr_dt()
+      }
+    })
+    observeEvent(pr_cat(), {
+      num_categories(length(pr_cat()))
+      categorize(TRUE)
+    })
 
-      # Render preset categories
-      output$def_categories_ui <- renderUI({
-        categories <- preset_categories
-        num_categories(length(categories))
-        updateNumericInput(
-          session = session,
-          inputId = "num_categories",
-          value = length(categories)
-        )
-        if (selected_column$data_type == "categorical") {
-          cat_names <- names(categories)
-          vals <- unique(dataset()[[selected_column$name]])
-          selected_vals <- unlist(categories)
-          unselected_vals <- setdiff(vals, selected_vals)
-          fluidRow(
-            column(6,
-              bucket_list(
-                header = NULL,
-                group_name = "bucket_list_group",
-                class = c("default-sortable"),
-                add_rank_list(
-                  text = "Werte in Spalte",
-                  labels = unselected_vals,
-                  input_id = ns("list_orignal_values")
-                )
-              )
-            ),
-            column(6,
-              lapply(1:input$num_categories, function(n) {
-                tagList(
-                  textInput(
-                    ns(paste0("name_cat_", n)),
-                    width = "100%",
-                    label = NULL,
-                    value = cat_names[[n]],
-                    placeholder = paste("Kategorie", n)
-                  ),
-                  bucket_list(
-                    header = NULL,
-                    group_name = "bucket_list_group",
-                    orientation = "vertical",
-                    class = c("default-sortable"),
-                    add_rank_list(
-                      text = NULL,
-                      labels = categories[[n]],
-                      input_id = ns(paste0("list_cat_", n))
-                    )
-                  )
-                )
-              })
-            )
-          )
-        } else {
-          min <- min(dataset()[[selected_column$name]], na.rm = TRUE)
-          list(numericInput(ns(paste0("min_cat_", 1)),
-                            paste0("Kategorie 1", " von"),
-                            value = min),
-               lapply(1:input$num_categories, function(i) {
-                 numericInput(ns(paste0("max_cat_", i)),
-                              paste0("Kategorie ", i, " bis"),
-                              value = categories[i])
-               }))
-        }
-      })
-      selected_column$categories <- preset_categories
+    # Update reactive cat num
+    observeEvent(input$num_categories, {
+      num_categories(input$num_categories)
     })
 
     # Update reactive values based on user input
@@ -183,8 +141,9 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
     })
 
     observeEvent(selected_column$name, {
-      if (all(is.numeric(dataset()[[input$column_select]]) |
-                is.na(dataset()[[input$column_select]]))) {
+      req(dataset())
+      if (all(is.numeric(dataset()[[selected_column$name]]) |
+                is.na(dataset()[[selected_column$name]]))) {
         updateRadioButtons(inputId = "data_type", selected = "numeric")
       } else {
         updateRadioButtons(inputId = "data_type", selected = "categorical")
@@ -207,15 +166,36 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
     # Update column name display
     output$column_name <- renderText({
       req(input$column_select)
-      input$column_select
+      selected_column$name
     })
 
     # Define UI for category selection based on data type
     output$def_categories_ui <- renderUI({
+      req(num_categories() > 0, dataset(), selected_column$name)
+      col_uniq <- unique(dataset()[[selected_column$name]])
+
       if (selected_column$data_type == "categorical") {
-        vals <- unique(dataset()[[selected_column$name]])
+        # Get preset categories if applicable
+        if (!is.null(pr_cat())) {
+          c <- list()
+          vals <- col_uniq
+          for (cat in names(pr_cat())) {
+            c[[cat]] <- intersect(pr_cat()[[cat]], vals)
+            vals <- setdiff(vals, c[[cat]])
+          }
+          cats <- function(i) c[[i]]
+          cat_names <- function(i) names(c)[[i]]
+          # Ensure presets are applied only once
+          pr_cat(NULL)
+        } else {
+          cats <- function(i) NULL
+          cat_names <- function(i) NULL
+          vals <- col_uniq
+        }
+
+        # Fill category list with defaults or presets
         if (length(vals) > MAX_VAL && !continue()) {
-          if (all(is.numeric(dataset()[[selected_column$name]]))) {
+          if (all(is.numeric(col_uniq))) {
             HTML(paste("Das Merkmal enthält mehr als", MAX_VAL, "numerische
                         Werte. Bitte wählen Sie die Option Numerisch"))
           } else {
@@ -237,11 +217,12 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
                 input_id = ns("list_orignal_values")
               )
             )),
-            column(6, lapply(1:input$num_categories, function(n) {
+            column(6, lapply(1:num_categories(), function(n) {
               tagList(
                 textInput(ns(paste0("name_cat_", n)),
                           width = "100%",
                           label = NULL,
+                          value = cat_names(n),
                           placeholder = paste("Kategorie", n)),
                 bucket_list(
                   header = NULL,
@@ -249,7 +230,7 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
                   orientation = "vertical",
                   class = c("default-sortable"),
                   add_rank_list(text = NULL,
-                                labels = NULL,
+                                labels = cats(n),
                                 input_id = ns(paste0("list_cat_", n)))
                 )
               )
@@ -257,43 +238,56 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
           )
         }
       } else {
-        if (!all(is.numeric(dataset()[[selected_column$name]]))) {
+        if (!all(is.numeric(col_uniq))) {
           HTML("Diese Daten sind nicht numerisch, wählen sie die Option
                 'kategorisch'")
         } else {
-          min <- min(dataset()[[selected_column$name]], na.rm = TRUE)
-          max <- max(dataset()[[selected_column$name]], na.rm = TRUE)
-          avg_dist <- (max - min) / input$num_categories
+          min <- min(col_uniq, na.rm = TRUE)
+          if (!is.null(pr_cat())) {
+            vals <- pr_cat()
+            pr_cat(NULL)
+          } else {
+            max <- max(col_uniq, na.rm = TRUE)
+            avg_dist <- (max - min) / num_categories()
+            vals <- lapply(1:num_categories(), function(n) {
+              min + (n * avg_dist)
+            })
+          }
           list(numericInput(ns(paste0("min_cat_", 1)),
                             paste0("Kategorie 1", " von"),
                             value = min),
-               lapply(1:input$num_categories, function(i) {
-                 numericInput(ns(paste0("max_cat_", i)),
-                              paste0("Kategorie ", i, " bis"),
-                              value = min + (i * avg_dist))
+               lapply(1:num_categories(), function(n) {
+                 numericInput(ns(paste0("max_cat_", n)),
+                              paste0("Kategorie ", n, " bis"),
+                              value = vals[[n]])
                }))
         }
       }
     })
 
-    # Handle apply button event to update category definitions
     observeEvent(input$apply_button, {
-      req(selected_column$data_type)
+      categorize(TRUE)
+    })
+
+    # Handle apply button event to update category definitions
+    observeEvent(categorize(), {
+      req(selected_column$data_type, categorize(), num_categories() > 0)
+      categorize(FALSE)
       if (selected_column$data_type == "categorical") {
-        categories <- lapply(1:input$num_categories, function(i) {
+        categories <- lapply(1:num_categories(), function(i) {
           req(input[[paste0("list_cat_", i)]])
           input[[paste0("list_cat_", i)]]
         })
-        names <- lapply(1:input$num_categories, function(i) {
+        names <- lapply(1:num_categories(), function(i) {
           name <- input[[paste0("name_cat_", i)]]
           ifelse(name != "", name, paste("Kategorie", i))
         })
       } else {
-        categories <- lapply(1:input$num_categories, function(i) {
+        categories <- lapply(1:num_categories(), function(i) {
           req(input[[paste0("max_cat_", i)]])
           input[[paste0("max_cat_", i)]]
         })
-        names <- lapply(1:input$num_categories, function(i) {
+        names <- lapply(1:num_categories(), function(i) {
           paste("Kategorie", i)
         })
       }
@@ -301,12 +295,6 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
       names <- lapply(names, function(n) str_replace_all(n, " ", "."))
       names(categories) <- names
       selected_column$categories <- categories
-      updateActionButton(
-        session,
-        "apply_button",
-        label = "Angewendet",
-        disabled = TRUE
-      )
     })
 
     # Handle remove button event

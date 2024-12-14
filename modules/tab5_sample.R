@@ -26,10 +26,9 @@
 #' - `sample_ui`: Constructs the user interface for the sampling module.
 #' - `sample_server`: Manages logic related to stratified sampling, including
 #'   updating UI components and processing sampling output.
-#' - `strat_layers`: Represents stratification layer information, which affects
-#'   sampling calculations.
-#' - `ratios`, `sample_size`, `display_strata`: Reactive values storing
-#'   sampling parameters and results.
+#' - `dataset`: Represents the categorized dataset, which is used for sampling
+#' - `cat_counts`, `ratios`, `sample_size`, `display_strata`: Reactive values
+#'   storing sampling parameters and results.
 
 # Load necessary libraries
 library(shiny)
@@ -85,7 +84,7 @@ sample_ui <- function(id) {
 }
 
 # Define the server logic for the stratified sampling module
-sample_server <- function(id, strat_layers, data_size, presets) {
+sample_server <- function(id, dataset, presets) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     tab_ids <- reactiveVal(list())
@@ -96,6 +95,17 @@ sample_server <- function(id, strat_layers, data_size, presets) {
     ratios <- reactiveVal(NULL)
     sample_size <- reactiveVal(NULL)
     realized_sample_size <- reactiveVal(NULL)
+    cat_counts <- reactiveVal(NULL)
+    data_size <- reactiveVal(NULL)
+
+    observeEvent(dataset(), {
+      cc <- list()
+      for (name in colnames(dataset())) {
+        cc[[name]] <- table(dataset()[[name]])
+      }
+      cat_counts(cc)
+      data_size(nrow(dataset()))
+    })
 
     # Update sample size when input changes
     observeEvent(input$sample_size, {
@@ -104,7 +114,6 @@ sample_server <- function(id, strat_layers, data_size, presets) {
 
     # Render UI elements that depend on data size
     observeEvent(data_size(), {
-      print(0)
       output$data_size <- renderUI({
         HTML(paste("Grundgesamtheit:", data_size(), "Instanzen"))
       })
@@ -123,8 +132,8 @@ sample_server <- function(id, strat_layers, data_size, presets) {
     })
 
     # Render probability selection UI dynamically
-    observeEvent(strat_layers(), {
-      req(strat_layers(), sample_size() > 0)
+    observeEvent(cat_counts(), {
+      req(cat_counts(), sample_size() > 0)
       # Remove all existing tabs
       for (tid in tab_ids()) {
         removeTab(
@@ -135,16 +144,19 @@ sample_server <- function(id, strat_layers, data_size, presets) {
       }
       tab_ids(list())
 
-      print(strat_layers())
-      for (layer in strat_layers()) {
-        print(layer$id)
+      for (name in names(cat_counts())) {
+        # skip hidden "Gesamtheit" column
+        if (name == "Gesamtheit") next
+        # sublist of cat_counts
+        ccn <- cat_counts()[[name]]
+
         # Create a new tab for each stratification layer
         new_tab <- tabPanel(
-          title = layer$name,
-          value = layer$id,
+          title = name,
+          value = name,
           br(),
           # Choice for selection probability
-          radioButtons(ns(paste0(layer$id, "sel_kind")),
+          radioButtons(ns(paste0(name, "_sel_kind")),
             label = "Wahrscheinlichkeitsart",
             choices = c(
               "Stichprobenanteil: (Diese Kategorie soll X% der Stichprobe ausmachen)" = "population", # nolint
@@ -154,29 +166,29 @@ sample_server <- function(id, strat_layers, data_size, presets) {
           hr(),
           # Button to reset sliders to proportional values
           actionButton(
-            ns(paste0(layer$id, "_proportional")),
+            ns(paste0(name, "_proportional")),
             label = "Proportional zum Datensatz"
           ),
           br(), br(),
           # Probability slider for each category
-          unname(lapply(names(layer$cat_counts), function(cat) {
+          unname(lapply(names(ccn), function(cat) {
             # Get default value from presets (or use proportional if not appl.)
-            val <- presets()$ratios[[layer$name]][[cat]]
+            val <- presets()$ratios[[name]][[cat]]
             if (is.null(val)) {
-              val <- round(layer$cat_counts[[cat]] / length(layer$col), 2)
+              val <- round(ccn[[cat]] / data_size(), 2)
             }
 
             sliderInput(
-              ns(paste0(layer$id, "_", cat, "_prob")),
+              ns(paste0(name, "_", cat, "_prob")),
               label = paste0("Wahrscheinlichkeit für ", cat, " (",
-                             layer$cat_counts[[cat]], " Instanzen)"),
+                             ccn[[cat]], " Instanzen)"),
               min = 0,
               max = 1,
               value = val,
               step = 0.01
             )
           })),
-          uiOutput(ns(paste0(layer$id, "_error")))
+          uiOutput(ns(paste0(name, "_error")))
         )
 
         # Add the new tab to the UI
@@ -186,48 +198,51 @@ sample_server <- function(id, strat_layers, data_size, presets) {
           tab = new_tab,
           select = TRUE
         )
-        tab_ids(c(tab_ids(), layer$id))
+        tab_ids(c(tab_ids(), name))
       }
     })
 
     # Implement slider logic
     observe({
-      print(strat_layers())
-      for (layer in strat_layers()) {
+      req(cat_counts())
+
+      for (name in names(cat_counts())) {
+        # skip hidden "Gesamtheit" column
+        if (name == "Gesamtheit") next
+        # sublist of cat_counts
+        ccn <- cat_counts()[[name]]
+
         # Selection mode: either "population" or "category"
-        print(layer$id)
-        req(input[[paste0(layer$id, "sel_kind")]])
-        print(2)
-        sel_kind <- input[[paste0(layer$id, "sel_kind")]]
-        print(3)
+        sel_kind <- input[[paste0(name, "_sel_kind")]]
+        req(sel_kind)
 
         # Update sliders to proportional values
-        observeEvent(input[[paste0(layer$id, "_proportional")]], {
-          for (cat in names(layer$cat_counts)) {
+        observeEvent(input[[paste0(name, "_proportional")]], {
+          for (cat in names(ccn)) {
             prop_value <- ifelse(
               sel_kind == "population",
               # Proportion of this category to entire dataset
-              layer$cat_counts[[cat]] / length(layer$col),
+              ccn[[cat]] / data_size(),
               # Proportion of the sample to the dataset size
-              sample_size() / length(layer$col)
+              sample_size() / data_size()
             )
             updateSliderInput(
               session,
-              paste0(layer$id, "_", cat, "_prob"),
+              paste0(name, "_", cat, "_prob"),
               value = round(prop_value, digits = 2)
             )
           }
         })
 
         # Render error messages for each layer
-        output[[paste0(layer$id, "_error")]] <- renderUI({
+        output[[paste0(name, "_error")]] <- renderUI({
           total <- 0
           req_sample_size <- 0
 
-          for (cat in names(layer$cat_counts)) {
-            cat_prop <- input[[paste0(layer$id, "_", cat, "_prob")]]
+          for (cat in names(ccn)) {
+            cat_prop <- input[[paste0(name, "_", cat, "_prob")]]
             total <- total + cat_prop
-            sample_cat_num <- layer$cat_counts[[cat]] * cat_prop
+            sample_cat_num <- ccn[[cat]] * cat_prop
             req_sample_size <- req_sample_size + sample_cat_num
           }
 
@@ -251,8 +266,8 @@ sample_server <- function(id, strat_layers, data_size, presets) {
                 "Die Auswahlwahrscheinlichkeiten sind zu hoch: Die bei diesen
                 Wahrscheinlichkeiten benötigte Stichprobengöße von mindestens",
                 req_sample_size, "ist größer als die angegebene Stichprobengröße
-                von", sample_size(), ". Die Sichprobengröße bleibt unverändert,
-                jede gezogene Instanz wird Teil dieser Kategorie sein,
+                von", sample_size(), ". Die Sichprobengröße bleibt unverändert 
+                und der Anteil dieser Kategorie wird maximiert,
                 allerdings kann die Auswahlwahrscheinlichkeit nicht eingehalten
                 werden."
               )), style = "color:red")
@@ -267,56 +282,45 @@ sample_server <- function(id, strat_layers, data_size, presets) {
 
     # Perform sampling when the button is clicked
     observeEvent(input$sample_button, {
-      req(strat_layers())
+      req(cat_counts(), dataset())
 
       # Collect selected proportions
-      ratios <- lapply(strat_layers(), function(layer) {
-        sel_kind <- input[[paste0(layer$id, "sel_kind")]]
+      ratios <- lapply(names(cat_counts()), function(name) {
+        sel_kind <- input[[(paste0(name, "_sel_kind"))]]
+        ccn <- cat_counts()[[name]]
 
         # Store chosen ratios as a named list like cat_counts
-        layer_ratios <- lapply(names(layer$cat_counts), function(cat) {
-          r <- input[[paste0(layer$id, "_", cat, "_prob")]]
-
-          if (sel_kind == "category") {
+        ratios_n <- lapply(names(ccn), function(cat) {
+          ratio_input <- input[[paste0(name, "_", cat, "_prob")]]
+          # Gesamtheit is a hidden column that has the same category
+          # for every instance -> necessary for random sampling
+          if (name == "Gesamtheit") {
+            r <- 1
+          } else if (sel_kind == "category") {
             # Convert to proportion of population
-            r <- (r * layer$cat_counts[[cat]]) / length(layer$col)
+            r <- (ratio_input * ccn[[cat]]) / data_size()
             r <- min(c(r, 1))
+          } else {
+            r <- ratio_input
           }
           r
         })
 
-        # Name the list of ratios
-        names(layer_ratios) <- names(layer$cat_counts)
-
         # Standardize ratios to sum up to 1 in population mode
-        sum_ratios <- sum(unlist(layer_ratios))
+        sum_ratios <- sum(unlist(ratios_n))
         if (sum_ratios != 1 && sel_kind == "population") {
-          layer_ratios <- lapply(layer_ratios, function(e) e / sum_ratios)
+          ratios_n <- lapply(ratios_n, function(e) e / sum_ratios)
         }
-        layer_ratios
+        names(ratios_n) <- names(ccn)
+        ratios_n
       })
-
-      # Get categorized columns and chosen ratios from strat_layers()
-      data <- data.frame(features(strat_layers(), "col"))
-      cat_counts <- features(strat_layers(), "cat_counts")
-
-      # Ensure consistent naming conventions
-      names <- features(strat_layers(), "name")
-      colnames(data) <- names
-      names(cat_counts) <- names
-      names(ratios) <- names
+      names(ratios) <- names(cat_counts())
 
       # Store ratios for later use
       ratios(ratios)
 
-      if (length(ratios) == 0) {
-        data <- data.frame(Gesamtheit = rep("Gesamtheit", 100))
-        ratios <- list(Gesamtheit = list(Gesamtheit = 1))
-        cat_counts <- list(Gesamtheit = list(Gesamtheit = 100))
-      }
-
       # Define strata sizes using imported function
-      strata(strata_sizes(data, ratios, cat_counts, 3, sample_size()))
+      strata(strata_sizes(dataset(), ratios(), cat_counts(), 3, sample_size()))
     })
 
     # Render the summary table

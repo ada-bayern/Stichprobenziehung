@@ -79,14 +79,15 @@ start_ui <- function(id) {
           options = list(`actions-box` = TRUE)
         ),
         # Button to trigger upload action
-        actionButton(ns("csv_upload_btn"), "Auswahl hochladen")#,
-        # hr(),
-        # fileInput(ns("rds_file"),
-        #   "Optional: Stichprobeneinstellungen (RDS) auswählen",
-        #   accept = c("rds"),
-        #   buttonLabel = "Suchen"
-        # ),
-        # uiOutput(ns("rds_response"))
+        actionButton(ns("csv_upload_btn"), "Auswahl hochladen"),
+        # TODO: include and debug
+        hr(),
+        fileInput(ns("rds_file"),
+          "Optional: Stichprobeneinstellungen (RDS) auswählen",
+          accept = c("rds"),
+          buttonLabel = "Suchen"
+        ),
+        uiOutput(ns("rds_response"))
       ),
       # Main panel for data preview
       mainPanel(
@@ -134,13 +135,29 @@ start_server <- function(id) {
     })
 
     # Update picker input with column names from the CSV
+    # Apply presets if RDS is already loaded
     observeEvent(csv_data(), {
       req(csv_data())
+      if (is.null(rds_data())) {
+        selected <- colnames(csv_data())
+      } else {
+        selected <- intersect(colnames(csv_data()), rds_data()$cols)
+      }
       updatePickerInput(
         session,
         "col_selector",
         choices = colnames(csv_data()),
-        selected = colnames(csv_data())
+        selected = selected
+      )
+    })
+
+    # Apply presets from RDS
+    observeEvent(rds_data(), {
+      req(rds_data(), csv_data())
+      updatePickerInput(
+        session,
+        "col_selector",
+        selected = intersect(colnames(csv_data()), rds_data()$cols)
       )
     })
 
@@ -152,38 +169,38 @@ start_server <- function(id) {
                 options = list(pageLength = 5))
     })
 
-    # observeEvent(input$rds_file, {
-    #   rds <- readRDS(input$rds_file$datapath)
-    #   valid <- TRUE
+    observeEvent(input$rds_file, {
+      rds <- readRDS(input$rds_file$datapath)
+      valid <- TRUE
 
-    #   if (is.list(rds)) {
-    #     ui <- span(HTML(paste0(
-    #       "Stichprobeneinstellungen erfolgreich geladen"
-    #     )), style = "color:green")
-    #     settings <- c("cols", "filters", "strat_layers", "ratios", "strata",
-    #                   "sample_size")
-    #     for (s in settings) {
-    #       if (!(s %in% names(rds))) {
-    #         ui <- span(HTML(paste0(
-    #           "Die Stichprobeneinstellungen in der RDS-Datei sind nicht valide
-    #           und können daher nicht verwendet werden. Die Einstellung '", s,
-    #           "' fehlt."
-    #         )), style = "color:red")
-    #         valid <- FALSE
-    #         break
-    #       }
-    #     }
-    #   } else {
-    #     ui <- span(HTML(paste0(
-    #       "Die Stichprobeneinstellungen in der RDS-Datei konnten nicht gelesen
-    #       werden."
-    #     )), style = "color:red")
-    #   }
-    #   output$rds_response <- renderUI(ui)
-    #   if (valid) {
-    #     rds_data(rds)
-    #   }
-    # })
+      if (is.list(rds)) {
+        ui <- span(HTML(paste0(
+          "Stichprobeneinstellungen erfolgreich geladen"
+        )), style = "color:green")
+        settings <- c("cols", "filters", "strat_layers", "ratios", "strata",
+                      "sample_size")
+        for (s in settings) {
+          if (!(s %in% names(rds))) {
+            ui <- span(HTML(paste0(
+              "Die Stichprobeneinstellungen in der RDS-Datei sind nicht valide
+              und können daher nicht verwendet werden. Die Einstellung '", s,
+              "' fehlt."
+            )), style = "color:red")
+            valid <- FALSE
+            break
+          }
+        }
+      } else {
+        ui <- span(HTML(paste0(
+          "Die Stichprobeneinstellungen in der RDS-Datei konnten nicht gelesen
+          werden."
+        )), style = "color:red")
+      }
+      output$rds_response <- renderUI(ui)
+      if (valid) {
+        rds_data(rds)
+      }
+    })
 
     # Return outputs for any additional required context
     return(list(data = csv_data, presets = rds_data, done = done))

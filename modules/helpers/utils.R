@@ -30,8 +30,6 @@
 #' - `plot_bivariate`: Constructs a bivariate distribution plot with custom
 #'                     tooltips to illustrate the relationship between two
 #'                     variables, accommodating mixed data types.
-#' - `features`: Extracts a specified feature from all items in a given
-#'               collection.
 
 # Import required libraries
 library(DT)
@@ -175,14 +173,4 @@ plot_bivariate <- function(data, var1, var2, max_vals = 100) {
       hovermode = "closest"
     )
   plot
-}
-
-#' Small function to get the names of all layers in a list of layers
-#'
-#' @param collection List or vector of objects.
-#' @param feature Feature that all objects in the collection must have.
-#' @return List containing the feature for each object.
-#' @export
-features <- function(collection, feature) {
-  unname(lapply(collection, function(obj) obj[[feature]]))
 }

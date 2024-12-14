@@ -128,12 +128,12 @@ server <- function(input, output, session) {
                                       dataset = ret_filter$data,
                                       presets = ret_start$presets)
   ret_sample <- sample_server("sample",
-                              strat_layers = ret_categories$strat_layers,
-                              data_size = reactiveVal(nrow(ret_filter$data)),
+                              dataset = ret_categories$data,
                               presets = ret_start$presets)
   overview_server("overview",
                   uploaded_data = ret_start$data,
-                  settings = settings())
+                  sample_data = ret_categories$data,
+                  settings = settings)
 
   # Store settings in reactive value
   observe({

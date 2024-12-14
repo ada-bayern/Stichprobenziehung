@@ -248,7 +248,7 @@ manual_ui <- function(id) {
                 angezeigt wird.")
       ),
 
-      h3("2. Überblick"),
+      h3("6. Überblick"),
       h4("Finale Stichprobenziehung und Download der Stichprobe und
           Dokumentation"),
       p("Dieser Bereich dient dazu den finalen Stichprobenprozess auszulösen,

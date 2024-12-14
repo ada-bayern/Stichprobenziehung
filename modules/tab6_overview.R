@@ -48,15 +48,13 @@ overview_ui <- function(id) {
           column(6, textInput(ns("id_name"), "Author-ID")),
           column(6, textInput(ns("id_data"), "Datensatz-ID"))
         ),
-        downloadButton(ns("download_report"), "Dokumentation als PDF laden"),
+        downloadButton(ns("save_pdf"),
+                       "Dokumentation als PDF speichern"),
         hr(),
-        downloadButton(ns("load_sample_button"), "Stichprobe als CSV laden"),
-        br(), br(),
-        downloadButton(ns("load_dataset_button"),
-                       "Markierten Datensatz als CSV laden"),
-        br(), br(),
-        downloadButton(ns("download_sample"),
-                       "Stichprobeninformationen als RDS laden")
+        downloadButton(ns("save_rds"),
+                       "Stichprobeninformationen als RDS speichern"),
+        hr(),
+        uiOutput(ns("save_sample"))
       ),
       mainPanel(
         br(),
@@ -69,15 +67,16 @@ overview_ui <- function(id) {
 }
 
 # Define server logic for the overview module
-overview_server <- function(id, uploaded_data, settings) {
+overview_server <- function(id, uploaded_data, sample_data, settings) {
   moduleServer(id, function(input, output, session) {
+    ns <- session$ns
 
     # Create reactive values to hold sample data and marked datasets
     sample <- reactiveVal(NULL)
     marked_dataset <- reactiveVal(NULL)
 
     # Define download handler for documentation report
-    output$download_report <- downloadHandler(
+    output$save_pdf <- downloadHandler(
       filename = function() {
         paste("Dokumentation_Aktenstichprobe_", Sys.Date(), ".pdf", sep = "")
       },
@@ -90,47 +89,43 @@ overview_server <- function(id, uploaded_data, settings) {
           output_format = "pdf_document",
           output_file = file,
           envir = new.env(parent = globalenv()),
-          params = settings
+          params = settings()
         )
       },
       contentType = "application/pdf"
     )
 
     # Define download handler for sample information as RDS
-    output$download_sample <- downloadHandler(
+    output$save_rds <- downloadHandler(
       filename = function() {
         paste("Aktenstichprobe_", Sys.Date(), ".rds", sep = "")
       },
       content = function(file) {
-        settings$strat_layers <- lapply(settings$strat_layers, function(l) {
-          l$col <- NULL
-          l
-        })
-        saveRDS(settings, file = file)
+        saveRDS(settings(), file = file)
       }
     )
 
     # Observer for sample button click to execute sampling
     observeEvent(input$sample_button, {
-      strat_layers <- settings$strat_layers
-      strata <- settings$strata
+      strat_layers <- settings()$strat_layers
+      strata <- settings()$strata
+      ratios <- settings()$ratios
       req(strat_layers, nrow(strata) > 0)
-      data <- data.frame(features(strat_layers, "col"))
-      colnames(data) <- features(strat_layers, "name")
+
       smpl <- strat_sample(
-        data = data,
-        strata_sizes = strata[, "Größe Stichprobe"],
-        cat_names = lapply(settings$ratios, names)
+        data = sample_data(),
+        strata_sizes = strata$`Größe Stichprobe`,
+        cat_names = lapply(ratios, names)
       )
-      print(3)
+
       # Store as dataset with extra binary column
       dataset <- uploaded_data()
       dataset$Stichprobe <- rep("nein", nrow(dataset))
       dataset[rownames(smpl), "Stichprobe"] <- "ja"
+
       # Store as sample dataset
       marked_dataset(dataset)
       smpl <- uploaded_data()[rownames(smpl), ]
-      print(4)
       sample(smpl)
     })
 
@@ -139,8 +134,20 @@ overview_server <- function(id, uploaded_data, settings) {
       datatable(sample())
     })
 
+    output$save_sample <- renderUI({
+      req(sample())
+      fluidRow(column(12,
+        downloadButton(ns("save_sample_button"),
+                       "Stichprobe als CSV speichern"),
+        br(), br(),
+        downloadButton(ns("save_dataset_button"),
+                       "Markierten Datensatz als CSV speichern"),
+        br(), br()
+      ))
+    })
+
     # Define download handler for sample as CSV
-    output$load_sample_button <- downloadHandler(
+    output$save_sample_button <- downloadHandler(
       filename = function() {
         paste("Aktenstichprobe_", Sys.Date(), ".csv", sep = "")
       },
@@ -150,7 +157,7 @@ overview_server <- function(id, uploaded_data, settings) {
     )
 
     # Define download handler for marked dataset as CSV
-    output$load_dataset_button <- downloadHandler(
+    output$save_dataset_button <- downloadHandler(
       filename = function() {
         paste("Datensatz_markiert_", Sys.Date(), ".csv", sep = "")
       },

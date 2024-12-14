@@ -92,17 +92,24 @@ categories_server <- function(id, dataset, presets) {
     # Reactive value for stratification layers
     strat_layers <- reactiveVal(list())
     strat_layer_servers <- reactiveVal(list())
+    layer_data <- reactiveVal(NULL)
+
+    # Add a "hidden" column to the dataframe that has only one value
+    # This is needed to calculate the parameters for pure random sampling
+    observeEvent(dataset(), {
+      layer_data(data.frame(Gesamtheit = rep("ja", nrow(dataset()))))
+    })
 
     # Fill strat_layers and UI with presets
     observeEvent(presets(), {
-      str_layer_servers <- list()
+      sls <- list()
       for (s in presets()$strat_layers) {
         # Create new UI for defining layer
         tab_num(tab_num() + 1)
         layer_id <- paste0("layer_", tab_num())
         unselected_cols <- setdiff(
           colnames(dataset()),
-          features(presets()$strat_layers, "name")
+          lapply(strat_layers(), function(layer) layer$name)
         )
 
         # Create tab for stratification layer UI
@@ -126,9 +133,9 @@ categories_server <- function(id, dataset, presets) {
           preset_data_type = s$data_type,
           preset_categories = s$categories
         )
-        str_layer_servers[[layer_id]] <- server
+        sls[[layer_id]] <- server
       }
-      strat_layer_servers(c(strat_layer_servers(), str_layer_servers))
+      strat_layer_servers(c(strat_layer_servers(), sls))
     })
 
     observe({
@@ -136,40 +143,42 @@ categories_server <- function(id, dataset, presets) {
 
       for (layer_id in names(strat_layer_servers())) {
         server <- strat_layer_servers()[[layer_id]]
+
         # Process stratification layer details once defined
         observeEvent(server$categories, {
-          req(length(server$categories) > 0)
-
           # Extract layer information
           name <- server$name
           dtype <- server$data_type
           cats <- server$categories
 
+          # Update stratification layers list
+          sl <- strat_layers()
+          sl[[layer_id]] <- list(
+            id = layer_id,
+            name = name,
+            data_type = dtype,
+            categories = cats
+          )
+          strat_layers(sl)
+
+          # Update strat layer data
+          ld <- layer_data()
           # Categorize column based on data type
-          col_categorized <- switch(
+          ld[[name]] <- switch(
             dtype,
             "numeric" = cut(dataset()[[name]], breaks = c(0, cats),
                             right = FALSE, include.lowest = TRUE),
             select_groups(dataset()[[name]], cats, NA)
           )
-
-          # Update stratification layers list
-          strat_layers_new <- strat_layers()
-          strat_layers_new[[layer_id]] <- list(
-            id = layer_id,
-            name = name,
-            data_type = dtype,
-            categories = cats,
-            col = col_categorized,
-            cat_counts = table(col_categorized)
-          )
-          strat_layers(strat_layers_new)
+          layer_data(ld)
         })
 
         # Allow for removal of stratification layers
         observeEvent(server$remove, {
           if (server$remove) {
-            strat_layers(strat_layers()[names(strat_layers()) != layer_id])
+            sl <- strat_layers()
+            sl[[layer_id]] <- NULL
+            strat_layers(sl)
             removeTab(
               inputId = "strata_rename_input_ui",
               target = ns(paste0("panel_def_", layer_id))
@@ -189,12 +198,12 @@ categories_server <- function(id, dataset, presets) {
       layer_id <- paste0("layer_", tab_num())
       unselected_cols <- setdiff(
         colnames(dataset()),
-        features(strat_layers(), "name")
+        lapply(strat_layers(), function(layer) layer$name)
       )
 
       # Create tab for stratification layer UI
       new_def_layer_ui <- tabPanel(
-        title = paste0("Schicht ", tab_num()),
+        title = paste("Schicht", tab_num()),
         value = ns(paste0("panel_def_", layer_id)),
         define_layer_ui(ns(paste0("def_", layer_id)), unselected_cols)
       )
@@ -208,18 +217,21 @@ categories_server <- function(id, dataset, presets) {
 
       # Handle output from layer server logic
       server <- define_layer_server(paste0("def_", layer_id), dataset)
-      strat_layer_servers(c(strat_layer_servers(), list(layer_id = server)))
+      sls <- strat_layer_servers()
+      sls[[layer_id]] <- server
+      strat_layer_servers(sls)
     })
 
     # Update column selection for cross table preview based on layers
     observeEvent(strat_layers(), {
-      names <- features(strat_layers(), "name")
+      names <- lapply(strat_layers(), function(layer) layer$name)
       updateSelectInput(session, "ct_column_one", choices = names)
       updateSelectInput(session, "ct_column_two", choices = names)
     })
 
     # Output stratification layer action buttons
     output$strat_layer_buttons_ui <- renderUI({
+      req(strat_layers())
       lapply(strat_layers(), function(layer) {
         actionButton(ns(paste0("button_", layer$id)), label = layer$name)
       })
@@ -240,12 +252,8 @@ categories_server <- function(id, dataset, presets) {
       req(input$ct_column_one, input$ct_column_two, strat_layers())
 
       # Retrieve columns based on names
-      col_one <- Find(
-        function(layer) layer$name == input$ct_column_one, strat_layers()
-      )$col
-      col_two <- Find(
-        function(layer) layer$name == input$ct_column_two, strat_layers()
-      )$col
+      col_one <- layer_data()[[input$ct_column_one]]
+      col_two <- layer_data()[[input$ct_column_two]]
 
       # Create crosstabulation and return as data frame
       ct <- table(col_one, col_two)
@@ -253,6 +261,6 @@ categories_server <- function(id, dataset, presets) {
     }, rownames = TRUE, striped = TRUE, bordered = TRUE)
 
     # Return the list of stratification layers
-    return(list(strat_layers = strat_layers))
+    return(list(data = layer_data, strat_layers = strat_layers))
   })
 }
