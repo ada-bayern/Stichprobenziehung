@@ -68,7 +68,7 @@ shiny::runApp()
 Alternativ können Sie die App über Ihr Terminal oder die CMD-Eingabeaufforderung starten:
 
 ```{bash}
-R -e "shiny::runApp('app.R', launch.browser = TRUE)"
+Rscript -e "shiny::runApp('app.R', launch.browser = TRUE)"
 ```
 
 ### Option 3: Startskript
