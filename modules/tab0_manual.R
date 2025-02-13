@@ -50,7 +50,8 @@ manual_ui <- function(id) {
         tags$li("Nutzen Sie das Optionsfeld, um anzugeben, ob die erste
                 Zeile der Datei als Kopfzeile verwendet wird."),
         tags$li("Wählen Sie den entsprechenden Trennzeichen aus Komma,
-                Semikolon oder Tabulator.")
+                Semikolon oder Tabulator."),
+        tags$li("Wählen Sie den passenden Dezimaltrennzeichen.")
       ),
       p("Datenvorschau und weitere Hinweise:"),
       tags$ul(
@@ -66,9 +67,13 @@ manual_ui <- function(id) {
                 die weitere Analyse bereitgestellt. In der Datenvorschau
                 ist nun sichtbar, dass sich die Anzahl der Reihen verändert
                 hat."),
-        tags$li("Stellen Sie sicher, dass die Dateigröße das Limit von 250 MB
+        tags$li("Stellen Sie sicher, dass die Dateigröße das Limit von 500 MB
                 nicht überschreitet und dass das Format korrekt ist, um
                 erfolgreiche Datenverarbeitung zu gewährleisten."),
+        tags$li("Wenn Sie beim Upload Probleme mit Sonderzeichen haben liegt
+                dies vermutlich an der Encodierung der CSV-Datei. Der einfachste
+                Weg dieses Problem zu lösen, ist die Datein in der UTF-8-
+                Enkodierung abzuspeichern, z.B. mit Excel."),
         tags$li("Optional können Sie eine RDS-Datei mit den Einstellungen
                 der letzten Stichprobenziehung laden. Dieses Feature unterliegt
                 allerdings noch Fehlern, vor allem im Abschnitt 'Kategorien'.")
@@ -132,11 +137,42 @@ manual_ui <- function(id) {
         tags$li("Klicken Sie auf 'Filter anwenden', um die gesetzten Filter
                 auf die Daten anzuwenden. Die gefilterten Daten werden sofort
                 aktualisiert."),
-        tags$li("Eine Übersicht über die aktuell angewendeten Filter wird im
+        tags$li("Eine Übersicht über die aktuell angewandten Filter wird im
                 'Aktuelle Filter'-Abschnitt angezeigt. Einzelne Filter können
                 durch die entsprechenden Schaltflächen entfernt werden."),
+        tags$li("Alle Filter in dieser Übersich werde konjunktiv, also per UND
+                verknüpft. Das bedeutet, dass die Daten nur angezeigt werden,
+                wenn alle Filter zutreffen."),
         tags$li("Verwenden Sie 'Alle Filter zurücksetzen', um alle Filter zu
                 entfernen und zur Ausgangsdatenansicht zurückzukehren.")
+      ),
+      p("ODER-Klauseln als Sonderfall:"),
+      tags$ul(
+        tags$li("Es ist auch möglich Filter nicht konjunktiv (UND), sondern
+                disjunktiv annzuwenden. Dafür können Sie mehrere Filter zu einer
+                ODER-Klausel hinzufügen. Die Filter werden dann auf die Daten
+                angewendet, wenn mindestens einer der Filter zutrifft."),
+        tags$li("Klicken Sie dafür auf 'Filter zu ODER-Klausel hinzufügen'.
+                Die gefilterten Daten werden dabei NICHT sofort aktualisiert."),
+        tags$li("Dabei öffnet sich eine zuvor versteckte Übersicht
+                ('ODER-Klausel'), in der Sie die Filter sehen und bearbeiten
+                können. Einzelne Filter können durch die entsprechenden
+                Schaltflächen entfernt werden."),
+        tags$li("Geben Sie Ihrer Klausel einen sinnvolle wiedererkennbare
+                Bezeichnung. Diese wird auch in den Stichprobeneinstellungen
+                gespeichert."),
+        tags$li("Verwenden Sie 'ODER-Klausel als Filter anwenden', um die
+                ODER-Klausel zur Filteransicht hinzuzufügen. Die gefilterten
+                Daten werden dabei sofort aktualisiert und die ODER-Klausel-
+                Übersicht wird wieder versteckt."),
+        tags$li("Verwenden Sie 'ODER-Klausel zurücksetzen', um alle Filter aus
+                der ODER-Klausel zu entfernen und zur vorherigen Ansicht
+                zurückzukehren. Die ODER-Klausel-Übersicht wird dabei wieder
+                versteckt."),
+        tags$li("BUG: Aktuell wird der erste Filter der yu einer ODER-Klausel
+                hinzugefügt wird, nicht korrekt angezeigt. Dieser wird jedoch
+                korrekt angewendet. Ab dem zweiten Filter funktioniert die
+                Anzeige korrekt.")
       ),
       p("Merkmalsverteilung und Zusatzfunktionen:"),
       tags$ul(
@@ -320,7 +356,8 @@ manual_ui <- function(id) {
         tags$li("Use the options field to specify whether the first row of the
                 file should be used as the header."),
         tags$li("Choose the appropriate delimiter from comma, semicolon, or
-                tab.")
+                tab."),
+        tags$li("Choose the appropriate decimal point.")
       ),
       p("Data Preview and Additional Notes:"),
       tags$ul(
@@ -333,7 +370,7 @@ manual_ui <- function(id) {
         tags$li("Click 'Auswahl hochladen' to save the selected columns. The
                 complete data is now available for further analysis. The data
                 preview will show a change in the number of rows."),
-        tags$li("Ensure the file size does not exceed the 250 MB limit and that
+        tags$li("Ensure the file size does not exceed the 500 MB limit and that
                 the format is correct for successful processing.")
       ),
 
@@ -388,6 +425,29 @@ manual_ui <- function(id) {
                 using their respective buttons."),
         tags$li("Use 'Alle Filter zurücksetzen' to remove all filters and return
                 to the original data view.")
+      ),
+      p("OR Clauses as a Special Case:"),
+      tags$ul(
+        tags$li("It is also possible to apply filters disjunctively (OR) instead
+                of conjunctively (AND). You can add multiple filters to an OR
+                clause. The filters are then applied to the data if at least one
+                of the filters is met."),
+        tags$li("Click on 'Add Filter to OR Clause'. The filtered data will NOT
+                be updated immediately."),
+        tags$li("A previously hidden overview ('OR Clause') will open, where you
+                can view and edit the filters. Individual filters can be removed
+                using the corresponding buttons."),
+        tags$li("Give your clause a meaningful and recognizable name. This will
+                also be saved in the sampling settings."),
+        tags$li("Use 'Apply OR Clause as Filter' to add the OR clause to the
+                filter view. The filtered data will be updated immediately, and
+                the OR clause overview will be hidden again."),
+        tags$li("Use 'Reset OR Clause' to remove all filters from the OR clause
+                and return to the previous view. The OR clause overview will be
+                hidden again."),
+        tags$li("BUG: Currently, the first filter added to an OR clause is not
+                displayed correctly. However, it is applied correctly. From the
+                second filter onwards, the display works correctly.")
       ),
       p("Feature Distribution and Additional Functions:"),
       tags$ul(

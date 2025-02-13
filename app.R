@@ -112,7 +112,7 @@ ui <- dashboardPage(
 server <- function(input, output, session) {
 
   # Set maximum request size for file uploads
-  options(shiny.maxRequestSize = 250 * 1024^2)
+  options(shiny.maxRequestSize = 500 * 1024^2)
 
   # Store settings of this session in reactive value
   settings <- reactiveVal(list())

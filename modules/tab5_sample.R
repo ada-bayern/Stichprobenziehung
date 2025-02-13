@@ -77,7 +77,8 @@ sample_ui <- function(id) {
         # "Garantierte Mindestgröße pro Kategorie" = "category_size"),
         # selected = "sample_size"
         # ),
-        dataTableOutput(ns("sample_summary"))
+        div(DTOutput(ns("sample_summary")),
+            style = "overflow-x: auto;")
       )
     )
   )

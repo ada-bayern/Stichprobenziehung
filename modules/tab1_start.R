@@ -38,6 +38,7 @@
 library(DT)
 library(shiny)
 library(shinyWidgets)
+library(readr)
 
 # UI Function for CSV upload screen
 start_ui <- function(id) {
@@ -69,6 +70,12 @@ start_ui <- function(id) {
                                  Semikolon = ";",
                                  Tab = "\t"),
                      selected = ","),
+        # Options for specifying the decimal point
+        radioButtons(ns("csv_decimal"),
+                     "Dezimaltrennzeichen",
+                     choices = c(Komma = ",",
+                                 Punkt = "."),
+                     selected = "."),
         # PickerInput for selecting columns
         hr(color = "black"),
         pickerInput(
@@ -117,10 +124,14 @@ start_server <- function(id) {
       req(input$csv_file) # Ensure a file is chosen
 
       # Read the CSV file with specified input options
-      data <- read.csv(input$csv_file$datapath,
-                       header = input$csv_header,
-                       sep = input$csv_sep,
-                       nrows = 5) # Read a few lines for preview
+      data <- read.csv2(
+        input$csv_file$datapath,
+        header = input$csv_header,
+        sep = input$csv_sep,
+        dec = input$csv_decimal,
+        fileEncoding = guess_encoding(input$csv_file$datapath)$encoding[1],
+        nrows = 5
+      ) # Read a few lines for preview
 
       # Store the preview data
       csv_data(data)
@@ -130,9 +141,13 @@ start_server <- function(id) {
     # Finalize upload and handle full data processing
     observeEvent(input$csv_upload_btn, {
       req(input$csv_file) # Check that the file is selected
-      data <- read.csv(input$csv_file$datapath,
-                       header = input$csv_header,
-                       sep = input$csv_sep)
+      data <- read.csv2(
+        input$csv_file$datapath,
+        header = input$csv_header,
+        sep = input$csv_sep,
+        dec = input$csv_decimal,
+        fileEncoding = guess_encoding(input$csv_file$datapath)$encoding[1]
+      )
 
       # Store the selected column data
       csv_data(data[input$col_selector])

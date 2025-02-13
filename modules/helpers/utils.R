@@ -19,7 +19,8 @@
 #'                    limitations of rendering complex features.
 #'
 #' Functions:
-#' - `filter_data`: Filters datasets based on values within a specified column.
+#' - `get_filter_index`: Applies a given condition to a vector producing a
+#'                       filter index.
 #'   - Takes into account numeric ranges or sets of categorical values.
 #' - `summarise_col`: Generates a summary of a data column that can be either
 #'                    numeric or categorical, presented in a DT datatable
@@ -45,28 +46,25 @@ ERROR_MESSAGE <- paste(
   "Merkmale kann einige Augenblicke dauern und",
   "unübersichtlich werden. Trotzdem fortfahren?"
 )
+TIMEOUT_MESSAGE <- "Die Operation wurde abgebrochen, da sie zu lange dauerte."
 
-#' Filter data by values in a single column
+
+#' Define a conitional filter index for a vector
 #'
-#' @param data Data frame containing the data to be filtered.
-#' @param group_col Column name to use for filtering.
+#' @param x A vector.
 #' @param filter_vals Filter criteria for the specified column.
 #' @param numeric Flag indicating if filtering is numeric-based.
-#' @return Filtered data frame.
-filter_data <- function(data, group_col, filter_vals, numeric = FALSE) {
+#' @return Logical vector indicating which rows to keep.
+get_filter_index <- function(x, filter_vals, numeric = FALSE) {
   if (is.null(filter_vals)) {
-    return(data)
+    return(rep(TRUE, length(x)))
   }
   # Filter data by selected grouping values
   if (numeric) {
-    filtered_data <- data[
-      data[[group_col]] >= filter_vals$min &
-        data[[group_col]] <= filter_vals$max,
-    ]
+    x >= filter_vals$min & x <= filter_vals$max
   } else {
-    filtered_data <- data[data[[group_col]] %in% filter_vals, ]
+    x %in% filter_vals
   }
-  filtered_data
 }
 
 #' Returns a summary of a data column of arbitrary type as a DT (datatable)
@@ -100,10 +98,10 @@ summarise_col <- function(data, var) {
 #' @param data Data frame containing the data.
 #' @param var Column name to plot.
 #' @return Plotly object showing the distribution.
-plot_univariate <- function(data, var) {
+plot_univariate <- function(data, var, timeout = 2) {
   # Get the selected column
   col <- data[[var]]
-  # Check data type and render appropriate plot
+
   if (is.numeric(col)) {
     # Histogram for numeric data
     plot <- plot_ly(data, x = ~get(var), type = "histogram") %>%
@@ -173,4 +171,25 @@ plot_bivariate <- function(data, var1, var2, max_vals = 100) {
       hovermode = "closest"
     )
   plot
+}
+
+#' Execute an expression with a specified timeout limit
+#' When this function works, it will be sooo nice
+#'
+#' @param expr The expression to evaluate.
+#' @param timeout The timeout limit in seconds.
+#' @return The result of the expression or a timeout message.
+with_timeout <- function(expr, timeout = 5) {
+  result <- tryCatch({
+    setTimeLimit(elapsed = timeout)
+    expr
+  }, error = function(e) {
+    if (grepl("reached elapsed time limit", e$message)) {
+      TIMEOUT_MESSAGE
+    } else {
+      message("Error: ", e$message)
+    }
+  })
+  setTimeLimit(elapsed = Inf) # Reset the time limit
+  result
 }

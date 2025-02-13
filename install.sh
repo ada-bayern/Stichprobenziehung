@@ -1,20 +1,20 @@
 #!/bin/bash
 
-echo "Starting installation of ADA Bayern Stichprobenziehung..."
+echo "Starte Installation von ADA Bayern Stichprobenziehung..."
 
 # Check for R
 if ! command -v R &> /dev/null; then
-  echo "Error: R is not installed. Please install R (version 4.1 or later) and rerun this script."
+  echo "Error: R ist nicht installiert. Installieren Sie R (Version 4.1 oder später) und starten Sie den Installer von Neuem."
   exit 1
 fi
 
-echo "Installing required R packages..."
+echo "Installiere benötigte R-Pakete..."
 Rscript -e "install.packages(c(
   'shiny', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'DT',
   'tidyverse', 'tinytex', 'sortable', 'lpSolve', 'plotly', 'rmarkdown'
 ))"
 
-echo "Installing TinyTeX for PDF report generation..."
+echo "Installiere TinyTeX für die PDF-Report-Erstellung..."
 Rscript -e "tinytex::install_tinytex()"
 
-echo "Installation complete. You can now run the application using the start script."
+echo "Installation vollständig. Klicken Sie auf 'start.bat' zum starten der App."

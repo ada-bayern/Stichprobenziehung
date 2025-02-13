@@ -12,7 +12,7 @@
 #'
 #' Imports:
 #' - From the modules/utils.R file, imports are plot_univariate, plot bivariate,
-#'   filter_data, summarise_col, MAX_VAL, and ERROR_MESSAGE.
+#'   get_filter_data, summarise_col, MAX_VAL, and ERROR_MESSAGE.
 #'
 #' UI Structure:
 #' - `dashboard_ui`: Constructs a user interface with a sidebar and main panel
@@ -68,7 +68,8 @@ dashboard_ui <- function(id) {
         ),
         hr(),
         tags$b("Kennwerte (Hauptmerkmal):"),
-        DTOutput(ns("column_summary")) # Summary output
+        div(DTOutput(ns("column_summary")),
+            style = "max-height: 100vh; overflow-y: auto;")
       ),
       # Main Panel for Plots
       mainPanel(
@@ -169,8 +170,8 @@ dashboard_server <- function(id, csv_data) {
         group_col(col_name) # Store group column
         num(TRUE) # Set numeric flag
         fluidRow(column(12,
-          numericInput(ns("filter_selector_min"), "Minimum:", value = min(col)),
-          numericInput(ns("filter_selector_max"), "Maximum:", value = max(col))
+          numericInput(ns("filter_selector_min"), "Minimum:", value = min(col, na.rm = TRUE)),
+          numericInput(ns("filter_selector_max"), "Maximum:", value = max(col, na.rm = TRUE))
         ))
       } else if (length(col_uniq) > MAX_VAL && !continue_col2()) {
         # Warning for excessive categorical values
@@ -203,27 +204,30 @@ dashboard_server <- function(id, csv_data) {
           input$filter_selector_max)
       filter_vals <- list(min = input$filter_selector_min,
                           max = input$filter_selector_max)
-      filtered_data(filter_data(csv_data(), group_col(), filter_vals, TRUE))
+      index <- get_filter_index(csv_data()[[group_col()]], filter_vals, TRUE)
+      filtered_data(csv_data()[index, ])
     })
 
     # Apply filters for a categorical column
     observeEvent(input$filter_selector_cat, {
       req(csv_data(), group_col(), input$filter_selector_cat)
-      filtered_data(
-        filter_data(csv_data(), group_col(), input$filter_selector_cat, FALSE)
-      )
+      filter_vals <- input$filter_selector_cat
+      index <- get_filter_index(csv_data()[[group_col()]], filter_vals, FALSE)
+      filtered_data(csv_data()[index, ])
     })
 
     # Render summary table for the selected column
     output$column_summary <- renderDT({
       req(filtered_data(), main_col())
-      summarise_col(filtered_data(), main_col())
+      with_timeout(summarise_col(filtered_data(), main_col()),
+                  timeout = 5)
     })
 
     # Render univariate distribution plot
     output$dist_plot <- renderPlotly({
       req(filtered_data(), main_col())
-      fig <- plot_univariate(filtered_data(), main_col())
+      fig <- with_timeout(plot_univariate(filtered_data(), main_col()),
+                          timeout = 5)
       if (input$log_scale) {
         fig <- fig %>% layout(yaxis = list(type = "log"))
       }
@@ -233,7 +237,8 @@ dashboard_server <- function(id, csv_data) {
     # Render bivariate distribution plot
     output$bivariate_plot <- renderPlotly({
       req(filtered_data(), main_col(), group_col())
-      plot_bivariate(filtered_data(), main_col(), group_col())
+      with_timeout(plot_bivariate(filtered_data(), main_col(), group_col()),
+                   timeout = 5)
     })
   })
 }

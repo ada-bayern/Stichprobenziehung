@@ -75,7 +75,8 @@ categories_ui <- function(id) {
                                 choices = NULL))
         ),
         # Output for cross table
-        tableOutput(ns("crosstable"))
+        div(tableOutput(ns("crosstable")),
+            style = "overflow-x: auto;")
       )
     )
   )

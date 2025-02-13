@@ -28,8 +28,7 @@ sudo apt install libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libt
 
 ```{R}
 install.packages(c(
-  'shiny', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'DT',
-  'tidyverse', 'tinytex', 'sortable', 'lpSolve', 'plotly', 'rmarkdown'
+  'shiny', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'DT', 'tidyverse', 'tinytex', 'sortable', 'lpSolve', 'plotly', 'rmarkdown'
 ))
 ```
 
