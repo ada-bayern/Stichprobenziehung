@@ -17,7 +17,14 @@ params:
 ---
 
 
+```{r echo=FALSE, message=FALSE}
+library(dplyr)
+library(stringr)
+```
+
+
 ## Stichprobenmetadaten
+
 ```{r echo=FALSE}
 tibble(
   Author = params$id_name,
@@ -29,7 +36,7 @@ tibble(
 Diese Merkmale wurden für die Grundgesamtheit ausgewählt:
 ```{r echo=FALSE}
 tibble(
-  `Merkmale der Grundgesamtheit` = params$col
+  `Merkmale der Grundgesamtheit` = params$cols
 )
 ```
 ## Merkmalsausprägungen
@@ -41,12 +48,20 @@ df <- data.frame(
   `Benutzte Werte` = c()
 )
 
-
 for (filter in params$filters) {
+  # Prepare used values for rendering
+  uv <- filter$used_vals
+  if (filter$type == "orclause") {
+    uv <- expand.grid(uv)
+    uv <- apply(uv, 1, function(row) {
+      row <- paste(row, collapse = " & ")
+      gsub("\U2208", "$\\\\in$", row)
+    })
+  }
+
   df <- rbind(df, data.frame(
     Merkmal = filter$col,
-    Typ = ifelse(filter$type == "categorical", "kat.", "num"),
-    `Benutzte Werte` = filter$used_vals
+    `Benutzte Werte` = uv
   ))
 }
 

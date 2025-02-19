@@ -225,9 +225,12 @@ categories_server <- function(id, dataset, presets) {
 
     # Update column selection for cross table preview based on layers
     observeEvent(strat_layers(), {
-      names <- lapply(strat_layers(), function(layer) layer$name)
-      updateSelectInput(session, "ct_column_one", choices = names)
-      updateSelectInput(session, "ct_column_two", choices = names)
+      cnames <- list()
+      for (layer in strat_layers()) {
+        cnames[[layer$name]] <- layer$name
+      }
+      updateSelectInput(session, "ct_column_one", choices = cnames)
+      updateSelectInput(session, "ct_column_two", choices = cnames)
     })
 
     # Output stratification layer action buttons

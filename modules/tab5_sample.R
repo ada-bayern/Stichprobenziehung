@@ -40,7 +40,6 @@ library(DT)
 
 # Import utility functions
 source("modules/helpers/utils.R")
-
 source("modules/helpers/tab5_1_strata_sizes.R")
 
 # Define the UI for the stratified sampling module (in German)
@@ -347,11 +346,14 @@ sample_server <- function(id, dataset, presets) {
     # Render the calculated strata sizes in a data table
     output$sample_summary <- renderDT({
       req(display_strata())
-      options <- ifelse(
-        !is.null(display_strata()) && nrow(display_strata()) > 10,
-        list(dom = "ltpr", lengthMenu = c(10, 15, 20), pageLength = 10),
-        list(dom = "ltr")
-      )
+      options <- DT_OPTIONS
+      if(!is.null(display_strata()) && nrow(display_strata()) > 10) {
+        options$dom <- "ltpr"
+        options$lengthMenu <- c(10, 15, 20)
+        options$pageLength <- 10
+      } else {
+        options$dom <- "ltr"
+      }
       datatable(display_strata(),
                 class = "cell-border stripe",
                 editable = TRUE,

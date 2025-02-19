@@ -48,6 +48,23 @@ ERROR_MESSAGE <- paste(
 )
 TIMEOUT_MESSAGE <- "Die Operation wurde abgebrochen, da sie zu lange dauerte."
 
+DT_OPTIONS <- list(
+  pageLength = 5,
+  language = list(
+    lengthMenu = "Zeige _MENU_ Einträge",
+    zeroRecords = "Keine Einträge gefunden",
+    info = "Zeige Einträge _START_ bis _END_ von _TOTAL_",
+    infoEmpty = "Keine Einträge verfügbar",
+    infoFiltered = "(gefiltert von _MAX_ Einträgen)",
+    search = "Suche",
+    paginate = list(
+      first = "Erste",
+      previous = "Zurück",
+      `next` = "Weiter",
+      last = "Letzte"
+    )
+  )
+)
 
 #' Define a conitional filter index for a vector
 #'
@@ -145,7 +162,7 @@ plot_bivariate <- function(data, var1, var2, max_vals = 100) {
 
   # Create custom tooltip text
   plot_data <- plot_data %>%
-    mutate(text = paste("X:", x_label, "<br>Y:", y_label, "<br>Count:", count))
+    mutate(text = paste0(var1, ": ", x_label, "<br>", var2, ": ", y_label, "<br>Menge:", count))
 
   # Create the plot with density-based point sizes and custom tooltips
   plot <- plot_ly(
@@ -161,12 +178,12 @@ plot_bivariate <- function(data, var1, var2, max_vals = 100) {
     layout(
       title = paste("Bivariate Verteilung von", var1, "und", var2),
       xaxis = list(
-        title = var1,
-        showticklabels = FALSE
+        title = var1
+        #showticklabels = FALSE
       ),
       yaxis = list(
-        title = var2,
-        showticklabels = FALSE
+        title = var2
+        #showticklabels = FALSE
       ),
       hovermode = "closest"
     )

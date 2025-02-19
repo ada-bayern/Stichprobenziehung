@@ -40,6 +40,8 @@ library(shiny)
 library(shinyWidgets)
 library(readr)
 
+source("modules/helpers/utils.R")
+
 # UI Function for CSV upload screen
 start_ui <- function(id) {
   ns <- NS(id)
@@ -77,18 +79,20 @@ start_ui <- function(id) {
                                  Punkt = "."),
                      selected = "."),
         # PickerInput for selecting columns
-        hr(color = "black"),
-        pickerInput(
-          inputId = ns("col_selector"),
-          label = "Spaltenauswahl:",
-          choices = NULL, # Placeholder, will be filled by server
-          selected = NULL, # Placeholder for default selection
-          multiple = TRUE,
-          options = list(`actions-box` = TRUE,
-                         `deselect-all-text` = "Alle abwählen",
-                         `select-all-text` = "Alle auswählen",
-                         `none-selected-text` = "Keine ausgewählt")
-        ),
+        hr(),
+        # pickerInput(
+        #   inputId = ns("col_selector"),
+        #   label = "Spaltenauswahl:",
+        #   choices = NULL, # Placeholder, will be filled by server
+        #   selected = NULL, # Placeholder for default selection
+        #   multiple = TRUE,
+        #   options = list(`actions-box` = TRUE,
+        #                  `deselect-all-text` = "Alle abwählen",
+        #                  `select-all-text` = "Alle auswählen",
+        #                  `none-selected-text` = "Keine ausgewählt")
+        # ),
+        # Dynamic UI for column (type) selection
+        uiOutput(ns("col_type_ui")),
         # Button to trigger upload action
         actionButton(ns("csv_upload_btn"), "Auswahl hochladen"),
         # TODO: include and debug
@@ -129,6 +133,7 @@ start_server <- function(id) {
         header = input$csv_header,
         sep = input$csv_sep,
         dec = input$csv_decimal,
+        # Guess the encoding of the file (UTF-8/ISO-8859-1) to avoid errors
         fileEncoding = guess_encoding(input$csv_file$datapath)$encoding[1],
         nrows = 5
       ) # Read a few lines for preview
@@ -149,26 +154,64 @@ start_server <- function(id) {
         fileEncoding = guess_encoding(input$csv_file$datapath)$encoding[1]
       )
 
+      # Convert columns based on user selection (or remove them if none)
+      for (col in colnames(data)) {
+        data[[col]] <- switch(input[[paste0("col_type_", col)]],
+          numeric = as.numeric(data[[col]]),
+          categorical = as.character(data[[col]]),
+          none = NULL
+        )
+      }
+
       # Store the selected column data
-      csv_data(data[input$col_selector])
+      csv_data(data)
+      # csv_data(data[input$col_selector])
       done(TRUE)
     })
 
     # Update picker input with column names from the CSV
     # Apply presets if RDS is already loaded
-    observeEvent(csv_data(), {
+    # observeEvent(csv_data(), {
+    #   req(csv_data())
+    #   if (is.null(rds_data())) {
+    #     selected <- colnames(csv_data())
+    #   } else {
+    #     selected <- intersect(colnames(csv_data()), rds_data()$cols)
+    #   }
+    #   updatePickerInput(
+    #     session,
+    #     "col_selector",
+    #     choices = colnames(csv_data()),
+    #     selected = selected
+    #   )
+    # })
+
+    # Generate UI for column type selection
+    output$col_type_ui <- renderUI({
       req(csv_data())
-      if (is.null(rds_data())) {
-        selected <- colnames(csv_data())
-      } else {
-        selected <- intersect(colnames(csv_data()), rds_data()$cols)
-      }
-      updatePickerInput(
-        session,
-        "col_selector",
-        choices = colnames(csv_data()),
-        selected = selected
-      )
+      cols <- colnames(csv_data())
+      l <- lapply(cols, function(col) {
+        # Define choices depending of column properties
+        choices <- c("Kategorisch" =  "categorical",
+                     "Spalte Entfernen" = "remove")
+        if (is.numeric(csv_data()[[col]])) {
+          choices <- c("Numerisch" = "numeric", choices)
+        }
+
+        fluidRow(column(12,
+          tags$i(col),
+          radioButtons(
+            inputId = session$ns(paste0("col_type_", col)),
+            label = "",
+            inline = TRUE,
+            choices = choices,
+            selected = choices[1]
+          ),
+          hr()
+        ))
+      })
+      list(tags$b("Spaltenauswahl"),
+           div(l, style = "height: 40vh; overflow-x: auto;"))
     })
 
     # Apply presets from RDS
@@ -186,7 +229,7 @@ start_server <- function(id) {
       req(csv_data())
       datatable(csv_data(),
                 class = "cell-border stripe",
-                options = list(pageLength = 5))
+                options = DT_OPTIONS)
     })
 
     observeEvent(input$rds_file, {

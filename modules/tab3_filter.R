@@ -94,6 +94,7 @@ filter_ui <- function(id) {
   )
 }
 
+
 # Server function for managing data filters and visualization
 filter_server <- function(id, csv_data, presets) {
   moduleServer(id, function(input, output, session) {
@@ -107,8 +108,42 @@ filter_server <- function(id, csv_data, presets) {
     all_vals <- reactiveVal(NULL)
     numeric_filter <- reactiveVal(NULL)
     filters <- reactiveVal(list()) # Store applied filters
-    observeEvent(presets(), {
-      filters(presets()$filters)
+
+    # Fill filters with presets
+    observe({
+      req(presets(), csv_data())
+      fltrs <- list()
+      for (f in presets()$filters) {
+
+        # Define function to get all values (returns NULL if col not in data)
+        get_all_vals <- function(col) {
+          # remove running number in or_clause for indexing in data
+          dcol <- gsub("_\\d*", "", col)
+          if (is.numeric(csv_data()[[dcol]])) {
+            list(paste0(col, " \U2208 [",
+                        paste(f$filter_vals[[col]], collapse = ", "), "]"),
+                  paste0(selected_col(), " \U00AC\U2208 [",
+                        paste(f$filter_vals[[col]], collapse = ", "), "]"))
+          } else {
+            unique(csv_data()[[dcol]])
+          }
+        }
+
+        # Apply function to every relevant column for this filter
+        if (f$type == "orclause") {
+          # Get all values for each feature in the or-clause
+          f$all_vals <- lapply(names(f$used_vals), get_all_vals)
+        } else {
+          # Get all values for this feature as interval or vector of uniques
+          f$all_vals <- get_all_vals(f$col)
+        }
+
+        # Add filter to reactive list
+        if (!is.null(f$all_vals) && length(f$all_vals) > 0) {
+          fltrs[[f$col]] <- f
+        }
+      }
+      filters(fltrs)
     })
 
     ###############################################
@@ -318,7 +353,7 @@ filter_server <- function(id, csv_data, presets) {
         # Stringify or clause as cartesian product for display
         if (filter$type == "orclause") {
           # Flatten used values to be searchable
-          uv <- unlist(lapply(filter$used_vals, unlist)) 
+          uv <- unlist(lapply(filter$used_vals, unlist))
           av <- expand.grid(filter$all_vals)
           in_uv <- apply(av, 1, function(row) any(row %in% uv))
           av <- apply(av, 1, paste, collapse = " & ")
@@ -359,7 +394,7 @@ filter_server <- function(id, csv_data, presets) {
     or_clause <- reactiveVal(list()) # Store filters of the current OR clause
     or_clause_col <- reactiveVal(NULL)
     or_tab_ids <- reactiveVal(list())
-    running_id <- reactiveVal(0)
+    running_id <- reactiveVal(1)
 
     # Open UI for OR clauses
     observeEvent(input$or_btn, {
@@ -386,7 +421,6 @@ filter_server <- function(id, csv_data, presets) {
 
       fltrs[[idx]] <- filter
       or_clause(fltrs)
-      running_id(running_id() + 1)
     })
 
     # Render OR UI
@@ -412,7 +446,10 @@ filter_server <- function(id, csv_data, presets) {
 
     # Store OR clause column name
     observe({
+      # Avoid empty or double names
       if (is.null(input$or_colname) ||
+            input$or_colname == "" ||
+            input$or_colname %in% names(filters()) ||
             input$or_colname %in% colnames(output_data())) {
         or_colname(paste0("ODER", running_id()))
       }
@@ -421,7 +458,6 @@ filter_server <- function(id, csv_data, presets) {
     # Add OR clause as filter
     observeEvent(input$filter_or_btn, {
       req(or_colname())
-
       # Store filter details of OR clause
       fltrs <- filters()
       filter <- list(
@@ -438,6 +474,7 @@ filter_server <- function(id, csv_data, presets) {
 
       or_clause_open(FALSE)
       or_clause(list())
+      running_id(running_id() + 1)
     })
 
     observeEvent(input$reset_or_btn, {
@@ -452,7 +489,6 @@ filter_server <- function(id, csv_data, presets) {
       req(csv_data(), or_colname(), or_clause())
       for (tid in or_tab_ids()) {
         removeTab(session = session, inputId = "or_clause", target = tid)
-        print(tid)
       }
       or_tab_ids(list())
 

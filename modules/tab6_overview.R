@@ -134,7 +134,7 @@ overview_server <- function(id, uploaded_data, sample_data, settings) {
 
     # Render data table for displaying sample data
     output$sample_table <- renderDT({
-      datatable(sample())
+      datatable(sample(), options = DT_OPTIONS)
     })
 
     output$save_sample <- renderUI({

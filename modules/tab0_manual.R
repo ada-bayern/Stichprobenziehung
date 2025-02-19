@@ -60,8 +60,13 @@ manual_ui <- function(id) {
                 Daten sicherzustellen."),
         tags$li("Die Vorschau zeigt standardmäßig die ersten fünf Zeilen der
                 Datei."),
-        tags$li("Wählen Sie unter 'Spaltenauswahl' die spezifischen Spalten
-                aus, die für die Analyse verwendet werden sollen."),
+        tags$li("Im erscheinenden Bereich 'Spaltenauswahl' können Sie den
+                Datentyp der einzelnen Spalten anpassen oder die Spalte
+                entfernen. Dabei können nur numerische Spalten in kategorische
+                umgewandelt, also jeder Zahl eine Kategorie zugeordnet, werden.
+                Das sollte i.d.R. nur getan werden, wenn die Ordnung der Werte
+                nicht relevant ist und es sich um eine überschaubare Menge an
+                Werten handelt."),
         tags$li("Klicken Sie auf 'Auswahl hochladen', um die ausgewählten
                 Spalten zu speichern. Die gesamten Daten werden nun für
                 die weitere Analyse bereitgestellt. In der Datenvorschau
@@ -365,8 +370,12 @@ manual_ui <- function(id) {
                 this to ensure the data is correct."),
         tags$li("By default, the preview shows the first five rows of the
                 file."),
-        tags$li("Under 'Spaltenauswahl,' select specific columns to be used
-                for analysis."),
+        tags$li("In the appearing 'Column Selection' area, you can adjust the
+                data type of individual columns or remove the column. Only
+                numeric columns can be converted to categorical, meaning each
+                number is assigned a category. This should generally only be
+                done if the order of the values is not relevant and the number
+                of values is manageable."),
         tags$li("Click 'Auswahl hochladen' to save the selected columns. The
                 complete data is now available for further analysis. The data
                 preview will show a change in the number of rows."),

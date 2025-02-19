@@ -3,6 +3,9 @@
 .RData
 .Ruserdata
 
+*.pdf
+*test*
+
 data
 notebooks
 *old
