@@ -72,16 +72,22 @@ Bei numerischen Mermalen steht die jeweilige Zahl für die Obergrenze der Katego
 ```{r echo=FALSE}
 df <- data.frame(
   Merkmal = c(),
+  Typ = c(),
   `Gruppierte Kategorie` = c(),
   `Zugeordnete Werte` = c()
 )
 
 
 for (layer in params$strat_layers) {
+  # Create cat name vector with matching length to all categories
+  cat <- c()
+  for (name in names(layer$categories)) {
+    cat <- c(cat, rep(name, length(layer$categories[[name]])))
+  }
   df <- rbind(df, data.frame(
     Merkmal = layer$name,
     Typ = ifelse(layer$data_type == "categorical", "kat.", "num"),
-    `Gruppierte Kategorie` = names(layer$categories),
+    `Gruppierte Kategorie` = cat,
     `Zugeordnete Werte` = unlist(layer$categories)
   ))
 }

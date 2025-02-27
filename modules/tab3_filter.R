@@ -452,6 +452,8 @@ filter_server <- function(id, csv_data, presets) {
             input$or_colname %in% names(filters()) ||
             input$or_colname %in% colnames(output_data())) {
         or_colname(paste0("ODER", running_id()))
+      } else {
+        or_colname(input$or_colname)
       }
     })
 
