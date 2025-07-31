@@ -33,13 +33,13 @@
 # Load necessary libraries
 library(shiny)
 library(DT)
+library(rintrojs)
 
-# TODO: LP sampling method without md (see strata_sizes.R)
 # TODO: Add summary of single categories?
-# TODO: modularize
 
 # Import utility functions
 source("modules/helpers/utils.R")
+source("modules/helpers/manual.R")
 source("modules/helpers/tab5_1_strata_sizes.R")
 
 # Define the UI for the stratified sampling module (in German)
@@ -47,37 +47,59 @@ sample_ui <- function(id) {
   ns <- NS(id)  # Namespace for the module
 
   fluidPage(
+    introjsUI(),
+    actionButton(ns("info"), "Info",
+                 icon = icon("question-circle")),
+
     titlePanel("Stichprobenziehung"),
     sidebarLayout(
       sidebarPanel(
-        # Sample size input
-        numericInput(ns("sample_size"),
-                     "Stichprobengröße",
-                     value = 100,
-                     min = 1,
-                     max = 99999,
-                     width = "80px"),
-        uiOutput(ns("data_size")),
-        hr(),
-        # Dynamic UI for probability selection
-        tabsetPanel(id = ns("select_prob")),
-        hr(),
-        # Button to trigger the sampling
-        actionButton(ns("sample_button"), "Stichprobe generieren")
+        div(id = ns("sidebar1"),
+          # Sample size input
+          numericInput(ns("sample_size"),
+                      "Stichprobengröße",
+                      value = 100,
+                      min = 1,
+                      max = 99999,
+                      width = "80px"),
+          uiOutput(ns("data_size"))
+        ), hr(),
+
+        div(id = ns("sidebar2"),
+          # Dynamic UI for probability selection
+          tabsetPanel(id = ns("select_prob"))
+        ), hr(),
+
+        div(id = ns("sidebar3"),
+          # Button to trigger the sampling
+          actionButton(ns("sample_button"), "Stichprobe generieren")
+        )
       ),
       mainPanel(
         h4("Zusammenfassung der Stichprobe"),
-        # Toggle between sampling strategies
-        # TODO: LP
-        # radioButtons(
-        # ns("sampling_type"),
-        # "Stichprobenstrategie",
-        # choices = c("Garantierte Gesamtstichprobengröße" = "sample_size",
-        # "Garantierte Mindestgröße pro Kategorie" = "category_size"),
-        # selected = "sample_size"
-        # ),
-        div(DTOutput(ns("sample_summary")),
-            style = "overflow-x: auto;")
+
+        div(id = ns("main1"),
+          # Toggle between sampling strategies
+          radioButtons(
+            ns("sampling_type"),
+            "Stichprobenstrategie",
+            choices = c("Garantierte Gesamtstichprobengröße" = "sample_size",
+                        "Garantierte Mindestgröße pro Kategorie" = "category_size",
+                        "Naives Verfahren (Keine Garantie)" = "naive"),
+            selected = "sample_size"
+          )
+        ),
+
+        div(id = ns("main2"),
+          # Display the size of the sample
+          uiOutput(ns("realized_sample_size"))
+        ),
+
+        # Data table to show the summary of the sampled data
+        div(id = "main3",
+          DTOutput(ns("sample_summary")),
+          style = "overflow-x: auto;"
+        ),
       )
     )
   )
@@ -87,6 +109,23 @@ sample_ui <- function(id) {
 sample_server <- function(id, dataset, presets) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # Steps for Guided Tour
+    steps <- reactive(data.frame(
+      element = c(NA, paste0("#", ns("sidebar1")), paste0("#", ns("sidebar2")),
+                  paste0("#", ns("sidebar3")), paste0("#", ns("main1")),
+                  paste0("#", ns("main2")), paste0("#", ns("main3")),
+                  paste0("#", ns("sidebar2")), paste0("#", ns("sidebar2")),
+                  NA, NA),
+      intro = MANUAL$sample
+    ))
+
+    # Info button for Guided Tour
+    observeEvent(input$info, introjs(session, options = c(
+      list("steps" = steps()),
+      INTRO_OPTIONS
+    )))
+
     tab_ids <- reactiveVal(list())
 
     # Reactive values for sampling output
@@ -97,6 +136,7 @@ sample_server <- function(id, dataset, presets) {
     realized_sample_size <- reactiveVal(NULL)
     cat_counts <- reactiveVal(NULL)
     data_size <- reactiveVal(NULL)
+    sampling_type <- reactiveVal(NULL)
 
     observeEvent(dataset(), {
       cc <- list()
@@ -110,6 +150,10 @@ sample_server <- function(id, dataset, presets) {
     # Update sample size when input changes
     observeEvent(input$sample_size, {
       sample_size(input$sample_size)
+    })
+
+    observeEvent(input$sampling_type, {
+      sampling_type(input$sampling_type)
     })
 
     # Render UI elements that depend on data size
@@ -175,7 +219,7 @@ sample_server <- function(id, dataset, presets) {
             # Get default value from presets (or use proportional if not appl.)
             val <- presets()$ratios[[name]][[cat]]
             if (is.null(val)) {
-              val <- round(ccn[[cat]] / data_size(), 2)
+              val <- round(ccn[[cat]] / data_size(), digits = 3)
             }
 
             sliderInput(
@@ -218,18 +262,20 @@ sample_server <- function(id, dataset, presets) {
 
         # Update sliders to proportional values
         observeEvent(input[[paste0(name, "_proportional")]], {
+          sel_kind <- input[[paste0(name, "_sel_kind")]] # must be done because of the observeEvent # nolint
           for (cat in names(ccn)) {
-            prop_value <- ifelse(
-              sel_kind == "population",
+            # Marker
+            prop_value <- if (sel_kind == "population") {
               # Proportion of this category to entire dataset
-              ccn[[cat]] / data_size(),
+              ccn[[cat]] / data_size()
+            } else {
               # Proportion of the sample to the dataset size
               sample_size() / data_size()
-            )
+            }
             updateSliderInput(
               session,
               paste0(name, "_", cat, "_prob"),
-              value = round(prop_value, digits = 2)
+              value = round(prop_value, digits = 3)
             )
           }
         })
@@ -324,15 +370,20 @@ sample_server <- function(id, dataset, presets) {
     })
 
     # Render the summary table
-    observeEvent(strata(), {
-      req(strata())
+    observeEvent({
+      strata()
+      sampling_type()
+    }, {
+      req(strata(), sampling_type())
       strt <- strata()
-      if (TRUE) { # TODO: input$sampling_type == "sample_size") {
-        cols <- c("Stratum", "Size.Population", "Ratio.Population",
-                  "Size.MD", "Selection.Probability.MD")
+      cols <- c("Stratum", "Size.Population", "Ratio.Population")
+
+      if (sampling_type() == "sample_size") {
+        cols <- c(cols, "Size.MD", "Selection.Probability.MD")
+      } else if (sampling_type() == "category_size") {
+        cols <- c(cols, "Size.LP", "Selection.Probability.LP")
       } else {
-        cols <- c("Stratum", "Size.Population", "Ratio.Population",
-                  "Size.LP", "Selection.Probability.LP")
+        cols <- c(cols, "Size.Naive", "Selection.Probability.Naive")
       }
       strt <- strt[cols]
       colnames(strt) <- c("Stratum", "Größe in Grundgesamtheit",
@@ -347,7 +398,7 @@ sample_server <- function(id, dataset, presets) {
     output$sample_summary <- renderDT({
       req(display_strata())
       options <- DT_OPTIONS
-      if(!is.null(display_strata()) && nrow(display_strata()) > 10) {
+      if(!is.null(display_strata()) && nrow(display_strata()) > 5) {
         options$dom <- "ltpr"
         options$lengthMenu <- c(10, 15, 20)
         options$pageLength <- 10
@@ -361,6 +412,16 @@ sample_server <- function(id, dataset, presets) {
                 options = options)
     })
 
+    output$realized_sample_size <- renderUI({
+      req(realized_sample_size())
+      fluidRow(column(12,
+        tags$b("Tatsächlich realisierte Stichprobengröße:"),
+        br(),
+        span(realized_sample_size(), style = "font-weight: bold;"),
+        hr()
+      ))
+    })
+
     # Persist table edits
     observeEvent(input$strata_cell_edit, {
       row <- input$strata_cell_edit$row
@@ -371,7 +432,9 @@ sample_server <- function(id, dataset, presets) {
     })
 
     # Return information for use in the application, such as strata summary
-    return(list(strata = display_strata, ratios = ratios,
-                sample_size = realized_sample_size))
+    return(list(strata = display_strata,
+                ratios = ratios,
+                sample_size = realized_sample_size,
+                sampling_type = sampling_type))
   })
 }

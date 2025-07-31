@@ -4,9 +4,9 @@ echo "Starting ADA Bayern Stichprobenziehung..."
 
 # Check for R
 if ! command -v R &> /dev/null; then
-  echo "Error: R is not installed. Please install R (version 4.1 or later) and rerun this script."
+  echo "Fehler: R ist nicht installiert. Bitte installieren Sie R (Version 4.1 oder neuer) und starten Sie dieses Skript erneut."
   exit 1
 fi
 
 # Launch the app
-Rscript -e "shiny::runApp('.', launch.browser = TRUE)"
+Rscript -e "shiny::runApp('app', launch.browser = TRUE)"

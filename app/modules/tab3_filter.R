@@ -40,45 +40,63 @@ library(shiny)
 library(DT)
 library(shinyWidgets)
 library(plotly)
+library(rintrojs)
 
 # Source necessary functions from external utility script
 source("modules/helpers/utils.R")
+source("modules/helpers/manual.R")
 
 
 # UI function for the data selection and filter module
 filter_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
+    introjsUI(),
+    actionButton(ns("info"), "Info",
+                 icon = icon("question-circle")),
+
     titlePanel("Datenfilterung"),
     # Sidebar Layout for actions and data selection
     sidebarLayout(
       sidebarPanel(
-        selectInput(
-          inputId = ns("column_selector"),
-          label = "Merkmal:",
-          choices = NULL, # Placeholder, will be updated by server
-          selected = NULL
+        div(id = ns("cs"),
+          selectInput(
+            inputId = ns("column_selector"),
+            label = "Merkmal:",
+            choices = NULL, # Placeholder, will be updated by server
+            selected = NULL
+          )
         ),
-        fluidRow(
+
+        fluidRow(id = ns("fs"),
           column(1),
-          column(11, uiOutput(ns("filter_selector")))
+          introBox(
+            column(11, uiOutput(ns("filter_selector")))
+          )
         ),
-        actionButton(ns("filter_btn"), "Filter anwenden"),
-        actionButton(ns("or_btn"), "Filter zu ODER-Verknüpfung hinzufügen"),
-        actionButton(ns("reset_btn"), "Alle Filter zurücksetzen"),
-        uiOutput(ns("or_ui")),
-        hr(),
-        tags$b("Aktuelle Filter:"),
-        tabsetPanel(id = ns("current_filters")),
-        hr(),
-        tags$b("Kennwerte:"),
-        div(DTOutput(ns("column_summary")),
-            style = "max-height: 50vh; overflow-y: auto;")
+
+        div(id = ns("filter_buttons"),
+          actionButton(ns("filter_btn"), "Filter anwenden"),
+          actionButton(ns("or_btn"), "Filter zu ODER-Verknüpfung hinzufügen"),
+          actionButton(ns("reset_btn"), "Alle Filter zurücksetzen"),
+          uiOutput(ns("or_ui"))
+        ), hr(),
+
+        div(id = ns("cur_fil"),
+          tags$b("Aktuelle Filter:"),
+          tabsetPanel(id = ns("current_filters"))
+        ), hr(),
+
+        div(id = ns("col_sum"),
+          tags$b("Kennwerte:"),
+          div(DTOutput(ns("column_summary")),
+              style = "max-height: 50vh; overflow-y: auto;")
+        )
       ),
       # Main Panel for data visualization
       mainPanel(
-        box(
-          title = "Merkmalsverteilung",
+        box(id = ns("plot"),
+          title = "Verteilung des Merkmals",
           width = 12,
           plotlyOutput(ns("dist_plot"), height = "80vh"),
           switchInput(
@@ -99,6 +117,20 @@ filter_ui <- function(id) {
 filter_server <- function(id, csv_data, presets) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # Steps for Guided Tour
+    steps <- reactive(data.frame(
+      element = c(NA, paste0("#", ns("cs")), paste0("#", ns("fs")),
+                  paste0("#", ns("filter_buttons")), paste0("#", ns("cur_fil")),
+                  NA, NA, NA, paste0("#", ns("col_sum")), paste0("#", ns("plot"))),
+      intro = MANUAL$filter
+    ))
+
+    # Info button for Guided Tour
+    observeEvent(input$info, introjs(session, options = c(
+      list("steps" = steps()),
+      INTRO_OPTIONS
+    )))
 
     # Reactive values to store selected features and applied filters
     output_data <- reactiveVal(NULL) # Output data store

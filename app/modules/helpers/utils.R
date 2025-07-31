@@ -66,6 +66,7 @@ DT_OPTIONS <- list(
   )
 )
 
+
 #' Define a conitional filter index for a vector
 #'
 #' @param x A vector.

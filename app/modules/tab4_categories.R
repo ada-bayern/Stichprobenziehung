@@ -39,11 +39,13 @@
 # Load necessary libraries
 library(shiny)
 library(DT)
+library(rintrojs)
 
 # Import necessary functions and variables
 source("modules/helpers/tab4_1_define_layer.R")
 source("modules/helpers/tab4_2_select_groups.R")
 source("modules/helpers/utils.R")
+source("modules/helpers/manual.R")
 
 
 # Define UI function for Categories module
@@ -52,20 +54,27 @@ categories_ui <- function(id) {
 
   # Fluid page layout for interactive features
   fluidPage(
+    introjsUI(),
+    actionButton(ns("info"), "Info",
+                 icon = icon("question-circle")),
+
     titlePanel("Variablen auswählen und Kategorien erstellen"),
     sidebarLayout(
       mainPanel(
-        actionButton(ns("add_strat_layer_button"), "Schicht hinzufügen",
-                     icon = icon("plus")),
+        div(id = ns("add"),
+          actionButton(ns("add_strat_layer_button"), "Schicht hinzufügen",
+                       icon = icon("plus"))
+        ),
 
-        # UI output for stratification layer buttons
-        uiOutput(ns("strat_layer_buttons_ui")),
+        div(id = ns("buttons"),
+          # UI output for stratification layer buttons
+          uiOutput(ns("strat_layer_buttons_ui")),
 
-        # Tabset for stratification layer configurations, initially hidden
-        tabsetPanel(id = ns("strata_rename_input_ui"), type = "hidden")
+          # Tabset for stratification layer configurations, initially hidden
+          tabsetPanel(id = ns("strata_rename_input_ui"), type = "hidden")
+        )
       ),
-      sidebarPanel(
-        uiOutput(ns("layer_display")),
+      sidebarPanel(id = ns("overview"),
         fluidRow(
           column(6, selectInput(ns("ct_column_one"),
                                 label = "1. Spalte auswählen",
@@ -74,9 +83,10 @@ categories_ui <- function(id) {
                                 label = "2. Spalte auswählen",
                                 choices = NULL))
         ),
-        # Output for cross table
-        div(tableOutput(ns("crosstable")),
-            style = "overflow-x: auto;")
+        div(
+          tableOutput(ns("crosstable")),
+          style = "overflow-x: auto;"
+        )
       )
     )
   )
@@ -86,6 +96,21 @@ categories_ui <- function(id) {
 categories_server <- function(id, dataset, presets) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # Steps for Guided Tour
+    steps <- reactive(data.frame(
+      element = c(NA, paste0("#", ns("add")), paste0("#", ns("buttons")),
+                  paste0("#", ns("overview")), paste0("#", ns("buttons")),
+                  paste0("#", ns("buttons")), paste0("#", ns("buttons")),
+                  paste0("#", ns("buttons")), paste0("#", ns("buttons"))),
+      intro = MANUAL$categories
+    ))
+
+    # Info button for Guided Tour
+    observeEvent(input$info, introjs(session, options = c(
+      list("steps" = steps()),
+      INTRO_OPTIONS
+    )))
 
     # Reactive value for tracking the number of stratification layers
     tab_num <- reactiveVal(0)

@@ -1,50 +1,57 @@
-# ADA Bayern Stichprobenziehung
+# ADA Stichprobenziehung
 
-*(English version below)*
 
 Eine Webanwendung zur geschichteten Stichprobenziehung mit Werkzeugen zur Datenexploration, Kategorisierung und Stichprobenerstellung.
 
+
+
+## Quickstart für Windows-Nutzer ohne globaler R Installation
+
+`ADA_Stichproben_Setup.exe` ist ein ausführbares Installationsprogramm, das alle erforderlichen Schritte für die Installation der Anwendung automatisiert. R und alle benötigten Pakete sind darin enthalten. Nach der Installation können Sie die Anwendung direkt über das Startmenü starten.
+
+---
 ---
 
 ## Anforderungen
 
-- **R**: Version 4.1 oder neuer.
+**R**: Version 4.1 oder neuer.
 
 ---
 
 ## Einrichtung / Installation
 
-### Voraussetzungen
+Führen Sie das Installationsskript `install_deps.R` aus, um alle benötigten R-Pakete zu installieren. Das können Sie fogendermaßen tun:
+### Otion 1: RStudio
+1. Öffnen Sie `install_deps.R` in RStudio.
+2. Klicken Sie auf "Run" oder drücken Sie `Ctrl + Enter`, um das Skript auszuführen.
 
-Für Linux-Nutzer: Stellen Sie sicher, dass die folgenden Bibliotheken auf Ihrem System installiert sind:  
+### Option 2: R-Konsole
+1. Navigieren Sie zum Verzeichnis, in dem sich `install_deps.R` befindet.
+2. Öffnen Sie eine R-Konsole (in RStudio oder Ihrem Terminal).
+3. Führen Sie den folgenden Befehl aus:
+```{R}
+source("install_deps.R")
+```
 
+### Option 3 Kommandozeile:
+1. Öffnen Sie Ihr Terminal oder die CMD-Eingabeaufforderung.
+2. Navigieren Sie zum Verzeichnis, in dem sich `install_deps.R` befindet.
+3. Führen Sie den folgenden Befehl aus:
+
+*Linux/Mac:*
 ```{bash}
-sudo apt install libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libgdal-dev
+Rscript install_deps.R
 ```
 
-### Option 1: R-Konsole
-
-Öffnen Sie eine R-Konsole (in RStudio oder Ihrem Terminal) und führen Sie den folgenden Befehl aus, um alle benötigten R-Pakete zu installieren:
-
-```{R}
-install.packages(c(
-  'shiny', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'DT', 'tidyverse', 'tinytex', 'sortable', 'lpSolve', 'plotly', 'rmarkdown'
-))
+*Windows:*
+```{bash}
+Rscript.exe install_deps.R
 ```
 
-> ⚠️ Der Installationsprozess kann einige Minuten dauern.
+### Option 4: Shell-Skript
+Führen Sie das Skript `install.bat` (Windows) / `install.sh` (Linux/Mac) mit einem Doppelklick aus, um die obigen Schritte automatisch auszuführen.
 
-Um die Erstellung von PDF-Berichten zu ermöglichen, installieren Sie TinyTeX mit folgendem Befehl:
 
-```{R}
-tinytex::install_tinytex()
-```
-
-### Option 2: Installationsskript
-
-Windows: Doppelklicken Sie auf `install.bat`, um die obigen Schritte automatisch auszuführen.
-
-Linux/Mac: Führen Sie das Skript `install.sh` aus, um die obigen Schritte auszuführen. Beachten Sie die oben genannten Voraussetzungen!
 
 > ⚠️ Der Installationsprozess kann einige Minuten dauern.
 
@@ -54,41 +61,53 @@ Linux/Mac: Führen Sie das Skript `install.sh` aus, um die obigen Schritte auszu
 
 Das Projekt läuft als Webanwendung in Ihrem Browser. Um das Programm zu starten, folgen Sie einer der untenstehenden Methoden.
 
-### Option 1: R-Konsole
+### Option 1: RStudio
+1. Öffnen Sie `app/app.R` in RStudio.
+2. Klicken Sie auf "Run App" oder drücken Sie `Ctrl + Shift + Enter`, um die App zu starten.
 
-Öffnen Sie Ihre R-Konsole im gleichen Verzeichnis wie `app.R` und starten Sie die App mit folgendem Befehl:
+### Option 2: R-Konsole
+1. Navigieren Sie zum Verzeichnis, in dem sich `app.R` befindet.
+2. Öffnen Sie eine R-Konsole (in RStudio oder Ihrem Terminal).
+3. Führen Sie den folgenden Befehl aus:
 
 ```{R}
-shiny::runApp()
+shiny::runApp('app.R', launch.browser = TRUE)
 ```
 
-### Option 2: Kommandozeile
+### Option 3: Kommandozeile
+1. Öffnen Sie Ihr Terminal oder die CMD-Eingabeaufforderung.
+2. Navigieren Sie zum Verzeichnis, in dem sich `app.R` befindet.
+3. Führen Sie den folgenden Befehl aus:
 
-Alternativ können Sie die App über Ihr Terminal oder die CMD-Eingabeaufforderung starten:
-
+*Linux/Mac*
 ```{bash}
 Rscript -e "shiny::runApp('app.R', launch.browser = TRUE)"
 ```
 
-### Option 3: Startskript
+*Windows*
+```{bash}
+Rscript.exe -e "shiny::runApp('app/app.R', launch.browser = TRUE)"
+```
 
-Windows: Doppelklicken Sie auf `start.bat`, um die obigen Schritte automatisch auszuführen.
-
-Linux/Mac: Führen Sie das Skript `start.sh` aus, um die obigen Schritte auszuführen.
+### Option 4: Startskript
+Doppelklicken Sie auf `start.bat` (Windows) / `start.sh` (Linux/Mac), um die obigen Schritte automatisch auszuführen.
 
 ---
 
 ## Für Entwickler
 
+Der Quellcode der App ist modular aufgebaut und in verschiedene Module unterteilt, die jeweils eine spezifische Funktionalität der Anwendung bereitstellen. Er liegt im Verzeichnis `app`.
+
 ### Projektstruktur
 
-Das Projekt ist wie folgt organisiert:
+Der Code ist wie folgt organisiert:
 
 ```
+app/
 ├── README.md                        # Diese Dokumentation
 ├── app.R                            # Hauptanwendungsdatei
 ├── report.Rmd                       # Vorlage zur Erstellung von PDF-Berichten
-└── modules                          # Anwendungs-Module
+└── modules/                         # Anwendungs-Module
     ├── tab0_manual.R                # Benutzerhandbuch (UI und Server)
     ├── tab1_start.R                 # Hochladen von Daten und Auswahl von Spalten
     ├── tab2_dashboard.R             # Datenexploration und Korrelationsanalyse
@@ -96,7 +115,8 @@ Das Projekt ist wie folgt organisiert:
     ├── tab4_categories.R            # Zusammenfassung von Werten in Kategorien für die Schichtung
     ├── tab5_sample.R                # Definition von Stichprobenparametern und Schichtgrößen
     ├── tab6_overview.R              # Ansicht der finalen Stichprobe und Exportmöglichkeiten
-    └── helpers                      # Unterstützende Skripte
+    └── helpers/                     # Unterstützende Skripte
+        ├── manual.R                 # Einstellungen und Texte für alle Infomodule
         ├── tab4_1_define_layer.R    # Sub-UI und Serverlogik für tab4_categories
         ├── tab4_2_select_groups.R   # Kategorisierungsalgorithmus
         ├── tab5_1_strata_sizes.R    # Algorithmus zur Berechnung optimaler Schichtgrößen
@@ -120,125 +140,3 @@ Für Fragen oder Probleme kontaktieren Sie bitte den Projektbetreuer.
 
 
 ---
----
-
-
-# ADA Bayern Sampling
-
-A web application for stratified sampling, providing tools for data exploration, categorization, and sample generation.
-
----
-
-## Requirements
-
-- **R**: Version 4.1 or newer.
-
----
-
-## Set Up / Installation
-
-### Prerequisites
-
-For Linux users: Ensure your system has the following libraries installed:  
-
-```{bash}
-sudo apt install libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libgdal-dev
-```
-
-### Option 1: R Console
-
-Open an R console (in RStudio or your terminal) and execute the following command to install all necessary R packages:
-
-```{R}
-install.packages(c(
-  'shiny', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'DT'
-  'tidyverse', 'tinytex', 'sortable', 'lpSolve', 'plotly', 'rmarkdown'
-))
-```
-
-> ⚠️ This installation process may take several minutes.
-
-To enable the generation of PDF reports, install TinyTeX by running:
-
-```{R}
-tinytex::install_tinytex()
-```
-
-### Option 2: Installation Script
-
-Windows: Double-click on `install.bat` to execute the steps above automatically.
-
-Linux/Mac: Run the script `install.sh` to execute the steps above. Be aware of the prerequisites!
-
-> ⚠️ This installation process may take several minutes.
-
----
-
-## Run the Application
-
-This project runs as a Webapp in your browser. To open the program follow either of the following methods.
-
-### Option 1: R Console
-
-Open your R console in the same directory as `app.R` and run the app by typing the following into your console:
-
-```{R}
-shiny::runApp()
-```
-
-### Option 2: Command Line
-
-Alternatively, launch the app from your terminal or CMD-line with:
-
-```{bash}
-R -e "shiny::runApp('app.R', launch.browser = TRUE)"
-```
-
-### Option 3: Starter Script
-
-Windows: Double-click on `start.bat` to execute the steps above automatically.
-
-Linux/Mac: Run the script `start.sh` to execute the steps above.
-
----
-
-## For Developers
-
-### Project Structure
-
-The project is organized as follows:
-
-```
-├── README.md                        # This documentation
-├── app.R                            # Main application file
-├── report.Rmd                       # Template for generating PDF reports
-└── modules                          # Application modules
-    ├── tab0_manual.R                # User manual (UI and server)
-    ├── tab1_start.R                 # Upload data and select columns
-    ├── tab2_dashboard.R             # Data exploration and correlation analysis
-    ├── tab3_filter.R                # Filter data to create a population
-    ├── tab4_categories.R            # Summarize values into categories for stratification
-    ├── tab5_sample.R                # Define sampling parameters and strata sizes
-    ├── tab6_overview.R              # View the final sample and download results
-    └── helpers                      # Supporting scripts
-        ├── tab4_1_define_layer.R    # Sub-UI and server logic for tab4_categories
-        ├── tab4_2_select_groups.R   # Categorization algorithm
-        ├── tab5_1_strata_sizes.R    # Algorithm for optimal strata size calculation
-        ├── tab6_1_strat_sample.R    # Sampling algorithm using strata sizes
-        └── utils.R                  # Shared utility functions
-```
-
----
-
-### Contribution Notes
-
-- Ensure that any new features or modules follow the modular structure demonstrated in the `modules` folder.
-- Test your contributions locally by running the application (`shiny::runApp()`).
-- Update this ReadMe and the relevant module documentation for any new features.
-
----
-
-### Support
-
-For questions or issues, please contact the project maintainer.
-

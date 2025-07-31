@@ -9,12 +9,6 @@ if ! command -v R &> /dev/null; then
 fi
 
 echo "Installiere benötigte R-Pakete..."
-Rscript -e "install.packages(c(
-  'shiny', 'shinythemes', 'shinydashboard', 'shinyWidgets', 'DT',
-  'tidyverse', 'tinytex', 'sortable', 'lpSolve', 'plotly', 'rmarkdown'
-))"
+Rscript install_deps.R
 
-echo "Installiere TinyTeX für die PDF-Report-Erstellung..."
-Rscript -e "tinytex::install_tinytex()"
-
-echo "Installation vollständig. Klicken Sie auf 'start.bat' zum starten der App."
+echo "Installation vollständig. Klicken Sie auf 'start.sh' zum starten der App."

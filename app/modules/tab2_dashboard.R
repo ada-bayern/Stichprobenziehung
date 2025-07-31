@@ -36,44 +36,63 @@ library(shiny)
 library(DT)
 library(shinyWidgets)
 library(plotly)
+library(rintrojs)
 
 # Source the necessary utility functions
 source("modules/helpers/utils.R")
+source("modules/helpers/manual.R")
 
 # UI function for the dashboard module
 dashboard_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
+    introjsUI(),
+    actionButton(ns("info"), "Info",
+                 icon = icon("question-circle")),
+
     titlePanel("Datenübersicht"),
     # Sidebar Layout
     sidebarLayout(
       # Sidebar for actions and options
       sidebarPanel(
-        selectInput(
-          inputId = ns("column_selector"),
-          label = "Hauptmerkmal:",
-          choices = NULL, # Placeholder, filled by server
-          selected = NULL
+        div(id = ns("cs1"),
+          selectInput(
+            inputId = ns("column_selector"),
+            label = "Hauptmerkmal:",
+            choices = NULL, # Placeholder, filled by server
+            selected = NULL
+          ),
+          uiOutput(ns("error_col"))
         ),
-        uiOutput(ns("error_col")),
-        selectInput(
-          inputId = ns("column_selector2"),
-          label = "Gruppierungsmerkmal:",
-          choices = NULL, # Placeholder, filled by server
-          selected = NULL
+
+        div(id = ns("cs2"),
+          selectInput(
+            inputId = ns("column_selector2"),
+            label = "Gruppierungsmerkmal:",
+            choices = NULL, # Placeholder, filled by server
+            selected = NULL
+          )
         ),
-        fluidRow(
+        fluidRow(id = ns("fs"),
           column(1),
-          column(11, uiOutput(ns("filter_selector")))
+          introBox(
+            column(11, uiOutput(ns("filter_selector"))),
+            data.step = 3,
+            data.intro = "Hier können Sie Filter auf das Gruppierungsmerkmal
+            anwenden. Je nach Typ des Gruppierungsmerkmals (kategorisch oder
+            numerisch) werden unterschiedliche Filteroptionen angezeigt."
+          )
         ),
         hr(),
-        tags$b("Kennwerte (Hauptmerkmal):"),
-        div(DTOutput(ns("column_summary")),
-            style = "max-height: 100vh; overflow-y: auto;")
+        div(id = ns("col_sum"),
+          tags$b("Kennwerte (Hauptmerkmal):"),
+          div(DTOutput(ns("column_summary")),
+              style = "max-height: 100vh; overflow-y: auto;")
+        )
       ),
       # Main Panel for Plots
       mainPanel(
-        box(
+        box(id = ns("plot1"),
           title = "Merkmalsverteilung (Hauptmerkmal)",
           width = 12,
           plotlyOutput(ns("dist_plot"), height = "80vh"),
@@ -85,12 +104,14 @@ dashboard_ui <- function(id) {
             offLabel = "Aus"
           )
         ),
+
         hr(),
-        box(
+        box(id = ns("plot2"),
           title = "Bivariate Merkmalsverteilung",
           width = 12,
           plotlyOutput(ns("bivariate_plot"), height = "80vh")
         )
+
       )
     )
   )
@@ -100,6 +121,20 @@ dashboard_ui <- function(id) {
 dashboard_server <- function(id, csv_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # Steps for Guided Tour
+    steps <- reactive(data.frame(
+      element = c(NA, paste0("#", ns("cs1")), paste0("#", ns("cs2")),
+                  paste0("#", ns("fs")), paste0("#", ns("col_sum")),
+                  paste0("#", ns("plot1")), paste0("#", ns("plot2"))),
+      intro = MANUAL$dashboard
+    ))
+
+    # Info button for Guided Tour
+    observeEvent(input$info, introjs(session, options = c(
+      list("steps" = steps()),
+      INTRO_OPTIONS
+    )))
 
     # Reactive values to store currently selected features and filtered data
     filtered_data <- reactiveVal(NULL)

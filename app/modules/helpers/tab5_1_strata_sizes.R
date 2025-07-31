@@ -220,10 +220,16 @@ strata_sizes <- function(data, ratios, cat_counts, strat_min, sample_size) {
   )
 
   # TODO: Find problem in LP guess method
-  # strata_sizes_lp <- lp_guess(
-  #   num_strata,
-  #   constraints
-  # )
+  strata_sizes_lp <- lp_guess(
+    num_strata,
+    constraints
+  )
+
+  print(num_cats)
+  print(num_strata)
+  print(strat_min)
+  print(sample_size)
+  print(constraints)
 
   strata_sizes_md <- lp_md_guess(
     num_cats,
@@ -240,23 +246,26 @@ strata_sizes <- function(data, ratios, cat_counts, strat_min, sample_size) {
   print(stratum_col)
   print(strata_counts)
   print(strata_sizes_naive)
+  print(strata_sizes_lp)
   print(strata_sizes_md)
 
   out <- data.frame(
     Stratum = stratum_col,
     Size.Population = strata_counts,
     Size.Naive = as.integer(strata_sizes_naive),
-    # Size.LP = as.integer(strata_sizes_lp), TODO: find problem
+    Size.LP = as.integer(strata_sizes_lp), # TODO: find problem
     Size.MD = as.integer(strata_sizes_md)
   )
 
   # Making sure that ratios and probabilities are rendered as percentages
   out$Ratio.Population <- out$Size.Population / sum(out$Size.Population)
-  out$Ratio.Population <- round(out$Ratio.Population, 2)
-  # out$Selection.Probability.LP <- out$Size.LP / out$Size.Population
-  # out$Selection.Probability.LP <- round(out$Selection.Probability.LP, 2)
+  out$Ratio.Population <- round(out$Ratio.Population, 3)
+  out$Selection.Probability.Naive <- out$Size.Naive / out$Size.Population
+  out$Selection.Probability.Naive <- round(out$Selection.Probability.Naive, 3)
+  out$Selection.Probability.LP <- out$Size.LP / out$Size.Population
+  out$Selection.Probability.LP <- round(out$Selection.Probability.LP, 3)
   out$Selection.Probability.MD <- out$Size.MD / out$Size.Population
-  out$Selection.Probability.MD <- round(out$Selection.Probability.MD, 2)
+  out$Selection.Probability.MD <- round(out$Selection.Probability.MD, 3)
 
   out
 }

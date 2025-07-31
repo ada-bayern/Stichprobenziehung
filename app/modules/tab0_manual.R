@@ -76,7 +76,7 @@ manual_ui <- function(id) {
                 nicht überschreitet und dass das Format korrekt ist, um
                 erfolgreiche Datenverarbeitung zu gewährleisten."),
         tags$li("Wenn Sie beim Upload Probleme mit Sonderzeichen haben liegt
-                dies vermutlich an der Encodierung der CSV-Datei. Der einfachste
+                dies vermutlich an der Enkodierung der CSV-Datei. Der einfachste
                 Weg dieses Problem zu lösen, ist die Datein in der UTF-8-
                 Enkodierung abzuspeichern, z.B. mit Excel."),
         tags$li("Optional können Sie eine RDS-Datei mit den Einstellungen
@@ -145,7 +145,7 @@ manual_ui <- function(id) {
         tags$li("Eine Übersicht über die aktuell angewandten Filter wird im
                 'Aktuelle Filter'-Abschnitt angezeigt. Einzelne Filter können
                 durch die entsprechenden Schaltflächen entfernt werden."),
-        tags$li("Alle Filter in dieser Übersich werde konjunktiv, also per UND
+        tags$li("Alle Filter in dieser Übersich werden konjunktiv, also per UND
                 verknüpft. Das bedeutet, dass die Daten nur angezeigt werden,
                 wenn alle Filter zutreffen."),
         tags$li("Verwenden Sie 'Alle Filter zurücksetzen', um alle Filter zu
@@ -282,7 +282,7 @@ manual_ui <- function(id) {
                 Kategorie, Allerdings wird nicht jedes Exemplar der Kategorie
                 auch gezogen."),
         tags$li("Die tatsächliche Stichprobenziehung passiert erst im nächsten
-                Schritt.In diesem Abschnitt werden lediglich die
+                Schritt. In diesem Abschnitt werden lediglich die
                 Stichprobenanteile einzelner Strata (Kategorienkombinationen)
                 berechnet"),
         tags$li("Sollten im Abschnitt zuvor keine Schichten definiert worden

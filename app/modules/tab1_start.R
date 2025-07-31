@@ -39,47 +39,57 @@ library(DT)
 library(shiny)
 library(shinyWidgets)
 library(readr)
+library(rintrojs)
 
 source("modules/helpers/utils.R")
+source("modules/helpers/manual.R")
 
 # UI Function for CSV upload screen
 start_ui <- function(id) {
   ns <- NS(id)
   fluidPage(
+    introjsUI(),
+    actionButton(ns("info"), "Info",
+                 icon = icon("question-circle")),
+
     titlePanel("Daten-Upload"),
     # Layout for sidebar and main panel
     sidebarLayout(
       # Sidebar for actions and options
       sidebarPanel(
-        # Input for file upload
-        fileInput(ns("csv_file"),
-          "Datensatz (CSV) auswählen",
-          accept = c("text/csv",
-                     "text/comma-separated-values,text/plain",
-                     ".csv"),
-          buttonLabel = "Suchen",
-          placeholder = "Keine Datei ausgewählt"
+        div(id = ns("csv_upload"),
+          # Input for file upload
+          fileInput(ns("csv_file"),
+                    "Datensatz (CSV) auswählen",
+                    accept = c("text/csv",
+                              "text/comma-separated-values,text/plain",
+                              ".csv"),
+                    buttonLabel = "Suchen",
+                    placeholder = "Keine Datei ausgewählt")
+        ), hr(),
+
+        div(id = ns("csv_options"),
+          # Option to indicate if the first row contains headers
+          checkboxInput(ns("csv_header"),
+                        "Kopfzeile",
+                        TRUE),
+          # Options for specifying the separator
+          radioButtons(ns("csv_sep"),
+                       "Separator",
+                       choices = c(Komma = ",",
+                                   Semikolon = ";",
+                                   Tab = "\t"),
+                       selected = ","),
+          # Options for specifying the decimal point
+          radioButtons(ns("csv_decimal"),
+                       "Dezimaltrennzeichen",
+                       choices = c(Komma = ",",
+                                   Punkt = "."),
+                       selected = ".")
         ),
         hr(),
-        # Option to indicate if the first row contains headers
-        checkboxInput(ns("csv_header"),
-                      "Kopfzeile",
-                      TRUE),
-        # Options for specifying the separator
-        radioButtons(ns("csv_sep"),
-                     "Separator",
-                     choices = c(Komma = ",",
-                                 Semikolon = ";",
-                                 Tab = "\t"),
-                     selected = ","),
-        # Options for specifying the decimal point
-        radioButtons(ns("csv_decimal"),
-                     "Dezimaltrennzeichen",
-                     choices = c(Komma = ",",
-                                 Punkt = "."),
-                     selected = "."),
+
         # PickerInput for selecting columns
-        hr(),
         # pickerInput(
         #   inputId = ns("col_selector"),
         #   label = "Spaltenauswahl:",
@@ -91,25 +101,32 @@ start_ui <- function(id) {
         #                  `select-all-text` = "Alle auswählen",
         #                  `none-selected-text` = "Keine ausgewählt")
         # ),
-        # Dynamic UI for column (type) selection
-        uiOutput(ns("col_type_ui")),
-        # Button to trigger upload action
-        actionButton(ns("csv_upload_btn"), "Auswahl hochladen"),
-        # TODO: include and debug
-        hr(),
-        fileInput(ns("rds_file"),
-          "Optional: Stichprobeneinstellungen (RDS) auswählen",
-          accept = c(".rds", ".RDS"),
-          buttonLabel = "Suchen",
-          placeholder = "Keine Datei ausgewählt"
-        ),
-        uiOutput(ns("rds_response"))
+
+        div(id = ns("col_selector"),
+          # Dynamic UI for column (type) selection
+          uiOutput(ns("col_type_ui")),
+
+          # Button to finalize the upload
+          actionButton(ns("csv_upload_btn"), "Auswahl hochladen"),
+        ), hr(),
+
+        div(id = ns("rds"),
+          # Optional: File input for RDS file upload
+          fileInput(ns("rds_file"),
+            "Optional: Stichprobeneinstellungen (RDS) auswählen",
+            accept = c(".rds", ".RDS"),
+            buttonLabel = "Suchen",
+            placeholder = "Keine Datei ausgewählt"
+          ),
+          uiOutput(ns("rds_response"))
+        )
       ),
       # Main panel for data preview
       mainPanel(
-        h3("Datenvorschau"),
-        div(dataTableOutput(ns("csv_preview")),
-            style = "overflow-x: auto;")
+        div(id = ns("preview"),
+          h3("Datenvorschau"),
+          div(dataTableOutput(ns("csv_preview")), style = "overflow-x: auto;")
+        )
       )
     )
   )
@@ -118,6 +135,21 @@ start_ui <- function(id) {
 # Server function for handling CSV upload and column selection
 start_server <- function(id) {
   moduleServer(id, function(input, output, session) {
+    ns <- session$ns
+
+    steps <- reactive(data.frame(
+      element = c(NA, NA, NA, NA, NA, NA,
+                  paste0("#", ns("csv_upload")), paste0("#", ns("csv_options")),
+                  paste0("#", ns("col_selector")), paste0("#", ns("rds")),
+                  paste0("#", ns("preview"))),
+      intro = MANUAL$start
+    ))
+
+    observeEvent(input$info, introjs(session, options = c(
+      list("steps" = steps()),
+      INTRO_OPTIONS
+    )))
+
     # Reactive values to manage the uploaded data state
     done <- reactiveVal(FALSE)
     csv_data <- reactiveVal(NULL)

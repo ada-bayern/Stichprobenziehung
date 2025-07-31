@@ -3,7 +3,7 @@
 #' This module provides the UI and server logic for the "Overview and Download"
 #' page of a Shiny application. It allows users to view sample data, trigger
 #' the final sampling process, and download various reports and data samples in
-#' different formats such as PDF, CSV, and RDS.
+#' different formats such as HTML, PDF, CSV, and RDS.
 #'
 #' UI Components:
 #' - Text inputs for author and dataset ID.
@@ -29,10 +29,12 @@
 # Load necessary libraries
 library(shiny)
 library(DT)
+library(rintrojs)
 
 # Source external module scripts
 source("modules/helpers/tab6_1_strat_sample.R")
 source("modules/helpers/utils.R")
+source("modules/helpers/manual.R")
 
 
 # Define UI for the overview module
@@ -41,26 +43,41 @@ overview_ui <- function(id) {
 
   # Construct fluid page layout with sidebar and main panel
   fluidPage(
+    introjsUI(),
+    actionButton(ns("info"), "Info",
+                 icon = icon("question-circle")),
+
     titlePanel("Überblick und Download"),
     sidebarLayout(
       sidebarPanel(
-        fluidRow(
+        fluidRow(id = ns("input_row"),
           column(6, textInput(ns("id_name"), "Author-ID")),
           column(6, textInput(ns("id_data"), "Datensatz-ID"))
         ),
-        downloadButton(ns("save_pdf"),
-                       "Dokumentation als PDF speichern"),
-        hr(),
-        downloadButton(ns("save_rds"),
-                       "Stichprobeninformationen als RDS speichern"),
-        hr(),
-        uiOutput(ns("save_sample"))
+
+        div(id = ns("download_doc"),
+          downloadButton(ns("save_documentation"),
+                         "Dokumentation speichern")
+        ), hr(),
+
+        div(id = ns("download_rds"),
+          downloadButton(ns("save_rds"),
+                         "Einstellungen als RDS speichern")
+        ), hr(),
+
+        div(id = ns("download_sample"),
+          uiOutput(ns("save_sample"))
+        ),
       ),
       mainPanel(
         br(),
-        actionButton(ns("sample_button"), "Stichprobe ziehen"),
-        hr(),
-        div(dataTableOutput(ns("sample_table")), style = "overflow-x: auto;")
+        div(id = ns("sample_button_div"),
+          actionButton(ns("sample_button"), "Stichprobe ziehen")
+        ), hr(),
+
+        div(id = ns("sample_table_div"),
+          dataTableOutput(ns("sample_table")), style = "overflow-x: auto;"
+        )
       )
     )
   )
@@ -71,14 +88,32 @@ overview_server <- function(id, uploaded_data, sample_data, settings) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    # Steps for Guided Tour
+    steps <- reactive(data.frame(
+      element = c(NA, paste0("#", ns("input_row")),
+                  paste0("#", ns("download_doc")),
+                  paste0("#", ns("download_rds")),
+                  paste0("#", ns("sample_button_div")),
+                  paste0("#", ns("sample_table_div")),
+                  paste0("#", ns("download_sample"))),
+      intro = MANUAL$overview
+    ))
+
+    # Info button for Guided Tour
+    observeEvent(input$info, introjs(session, options = c(
+      list("steps" = steps()),
+      INTRO_OPTIONS
+    )))
+
     # Create reactive values to hold sample data and marked datasets
     sample <- reactiveVal(NULL)
     marked_dataset <- reactiveVal(NULL)
 
     # Define download handler for documentation report
-    output$save_pdf <- downloadHandler(
+    output$save_documentation <- downloadHandler(
       filename = function() {
-        paste("Dokumentation_Aktenstichprobe_", Sys.Date(), ".pdf", sep = "")
+        paste("Dokumentation_Aktenstichprobe_", Sys.Date(), ".html", sep = "")
+        #paste("Dokumentation_Aktenstichprobe_", Sys.Date(), ".pdf", sep = "")
       },
       content = function(file) {
         # Create a temporary R Markdown file
@@ -89,13 +124,15 @@ overview_server <- function(id, uploaded_data, sample_data, settings) {
         params$id_data <- input$id_data
         # Knit the R Markdown document and save it to a file
         rmarkdown::render(temp_report,
-          output_format = "pdf_document",
+          output_format = "html_document",
+          # output_format = "pdf_document",
           output_file = file,
           envir = new.env(parent = globalenv()),
           params = params
         )
       },
-      contentType = "application/pdf"
+      # contentType = "application/pdf"
+      contentType = "text/html"
     )
 
     # Define download handler for sample information as RDS

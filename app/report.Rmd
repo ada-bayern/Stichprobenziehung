@@ -1,10 +1,19 @@
 ---
 title: Stichprobendokumentation
 date: Erstellt am `r format(Sys.Date(), "%d.%m.%Y")`
-#lang: de
+# lang: de
 output: 
-  pdf_document:
+  html_document:
     df_print: kable
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    number_sections: false
+    self_contained: true
+    theme: readable
+    highlight: tango
+  # pdf_document:
+    # df_print: kable
 params:
   id_name: NA
   id_data: NA
@@ -14,6 +23,7 @@ params:
   ratios: NA
   strata: NA
   sample_size: NA
+  sampling_type: NA
 ---
 
 
@@ -29,7 +39,10 @@ library(stringr)
 tibble(
   Author = params$id_name,
   Datensatz = params$id_data,
-  Stichprobengröße = params$sample_size
+  Stichprobengröße = params$sample_size,
+  Stichprobenverfahren = case_when(params$sampling_type == "sample_size" ~ "Garantierte Gesamtstichprobengröße",
+                                   params$sampling_type == "category_size" ~ "Garantierte Mindestgröße pro Kategorie",
+                                   params$sampling_type == "naive" ~ "Naives Verfahren (Keine Garantie)"),
 )
 ```
 ## Merkmale

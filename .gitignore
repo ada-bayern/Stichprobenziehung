@@ -1,12 +1,16 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-.DS_Store
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Ruserdata
+
+R-Portable*
+*.exe
+
+*.DS_Store
 
 *.pdf
 *test*
 
-data
-notebooks
+*data
+*notebooks
 *old

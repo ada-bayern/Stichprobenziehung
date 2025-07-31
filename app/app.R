@@ -10,7 +10,7 @@
 #' - Utilizes libraries such as shiny, shinydashboard, shinythemes, dplyr, and
 #'   tinytex for UI creation and data processing.
 #' - Imports functions from external R scripts for modular tab handling
-#'   (`manual.R`, `tab1_start.R`, `tab2_dashboard.R`, `tab3_filter.R`,
+#'   (`tab1_start.R`, `tab2_dashboard.R`, `tab3_filter.R`,
 #'   `tab4_categories.R`, `tab5_sample.R`, `tab6_overview.R`).
 #'
 #' UI Structure:
@@ -32,7 +32,7 @@
 #'   and data management.
 #' - `dashboardHeader`, `dashboardSidebar`, `dashboardBody`: Define the main
 #'   sections of the Shiny dashboard (header, sidebar menu, main body).
-#' - Different tab server functions (`manual_server`, `start_server`, etc.) for
+#' - Different tab server functions (`start_server`, etc.) for
 #'   handling logic specific to each tab.
 #' - Reactive values are utilized to hold and manage state and data flows
 #'   between tabs.
@@ -47,7 +47,7 @@ library(dplyr)
 library(tinytex)
 
 # Source external module scripts
-source("modules/tab0_manual.R")
+# source("modules/tab0_manual.R")
 source("modules/tab1_start.R")
 source("modules/tab2_dashboard.R")
 source("modules/tab3_filter.R")
@@ -57,7 +57,7 @@ source("modules/tab6_overview.R")
 
 # Define dashboard header
 db_header <- dashboardHeader(
-  title = "ADA Bayern Stichprobenziehung",
+  title = "ADA Stichprobenziehung",
   titleWidth = 400
 )
 
@@ -65,8 +65,8 @@ db_header <- dashboardHeader(
 db_sidebar <- dashboardSidebar(
   sidebarMenu(
     id = "menu",
-    menuItem("Anleitung", tabName = "manual", icon = icon("question")),
-    menuItem(""),
+    # menuItem("Anleitung", tabName = "manual", icon = icon("question")),
+    # menuItem(""),
     menuItem("Upload", tabName = "start", icon = icon("play")),
     menuItem("Datenansicht", tabName = "dashboard", icon = icon("dashboard")),
     menuItem("Datenfilterung", tabName = "filter", icon = icon("arrow-pointer")), # nolint
@@ -90,13 +90,13 @@ db_body <- dashboardBody(
   actionButton("next_button", "Weiter"),
   hr(),
   tabItems(
+    # tabItem("manual", manual_ui("manual")),
     tabItem("start", start_ui("start")),
     tabItem("dashboard", dashboard_ui("dashboard")),
     tabItem("filter", filter_ui("filter")),
     tabItem("categories", categories_ui("categories")),
     tabItem("sample", sample_ui("sample")),
-    tabItem("overview", overview_ui("overview")),
-    tabItem("manual", manual_ui("manual"))
+    tabItem("overview", overview_ui("overview"))
   )
 )
 
@@ -118,7 +118,7 @@ server <- function(input, output, session) {
   settings <- reactiveVal(list())
 
   # Call server logic for each tab module
-  manual_server("manual")
+  # manual_server("manual")
   ret_start <- start_server("start")
   dashboard_server("dashboard", csv_data = ret_start$data)
   ret_filter <- filter_server("filter",
@@ -143,14 +143,15 @@ server <- function(input, output, session) {
       strat_layers = ret_categories$strat_layers(),
       ratios = ret_sample$ratios(),
       strata = ret_sample$strata(),
-      sample_size = ret_sample$sample_size()
+      sample_size = ret_sample$sample_size(),
+      sampling_type = ret_sample$sampling_type()
     ))
   })
   # Observer for "Next" button clicks to navigate through tabs
   observeEvent(input$next_button, {
     current_tab <- input$menu
     next_tab <- case_when(
-      current_tab == "manual" ~ "start",
+      # current_tab == "manual" ~ "start",
       current_tab == "start" & ret_start$done() ~ "dashboard",
       current_tab == "dashboard" ~ "filter",
       current_tab == "filter" ~ "categories",
