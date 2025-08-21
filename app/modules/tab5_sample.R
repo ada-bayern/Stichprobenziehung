@@ -344,13 +344,16 @@ sample_server <- function(id, dataset, presets) {
             r <- 1
           } else if (sel_kind == "category") {
             # Convert to proportion of population
-            r <- (ratio_input * ccn[[cat]]) / data_size()
+            r <- (ratio_input * ccn[[cat]]) / sample_size()
             r <- min(c(r, 1))
+            print(paste("RatioInput for", name, "category", cat, "is", ratio_input))
+            print(paste("Ratio for", name, "category", cat, "is", r))
           } else {
             r <- ratio_input
           }
           r
         })
+        print(ratios_n)
 
         # Standardize ratios to sum up to 1 in population mode
         sum_ratios <- sum(unlist(ratios_n))
