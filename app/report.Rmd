@@ -24,6 +24,8 @@ params:
   strata: NA
   sample_size: NA
   sampling_type: NA
+  data_size: NA
+  proportional: NA
 ---
 
 
@@ -39,6 +41,7 @@ library(stringr)
 tibble(
   Author = params$id_name,
   Datensatz = params$id_data,
+  `Größe der Grundgesamtheit` = params$data_size,
   Stichprobengröße = params$sample_size,
   Stichprobenverfahren = case_when(params$sampling_type == "sample_size" ~ "Garantierte Gesamtstichprobengröße",
                                    params$sampling_type == "category_size" ~ "Garantierte Mindestgröße pro Kategorie",
@@ -108,6 +111,14 @@ for (layer in params$strat_layers) {
 tibble(df)
 ```
 ## Gewählte Stichprobenanteile pro Kategorie
+```{r echo=FALSE}
+if (params$proportional) {
+  note <- "Die gewählten Stichprobenanteile sind proportional zu den Anteilen in der Grundgesamtheit."
+} else {
+  note <- "Die gewählten Stichprobenanteile sind NICHT proportional zu den Anteilen in der Grundgesamtheit."
+}
+tibble(Note = note)
+```
 ```{r echo=FALSE}
 df <- data.frame(
   Merkmal = c(),

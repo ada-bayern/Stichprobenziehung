@@ -161,6 +161,7 @@ categories_server <- function(id, dataset, presets) {
         )
         sls[[layer_id]] <- server
       }
+      strat_layers(presets()$strat_layers)
       strat_layer_servers(c(strat_layer_servers(), sls))
     })
 

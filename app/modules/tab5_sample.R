@@ -57,11 +57,11 @@ sample_ui <- function(id) {
         div(id = ns("sidebar1"),
           # Sample size input
           numericInput(ns("sample_size"),
-                      "Stichprobengröße",
-                      value = 100,
-                      min = 1,
-                      max = 99999,
-                      width = "80px"),
+                       "Stichprobengröße",
+                       value = 100,
+                       min = 1,
+                       max = 99999,
+                       width = "80px"),
           uiOutput(ns("data_size"))
         ), hr(),
 
@@ -137,6 +137,7 @@ sample_server <- function(id, dataset, presets) {
     cat_counts <- reactiveVal(NULL)
     data_size <- reactiveVal(NULL)
     sampling_type <- reactiveVal(NULL)
+    proportional <- reactiveVal(TRUE)
 
     observeEvent(dataset(), {
       cc <- list()
@@ -278,7 +279,16 @@ sample_server <- function(id, dataset, presets) {
               value = round(prop_value, digits = 3)
             )
           }
+          # Set marker that sliders are proportional
+          proportional(TRUE)
         })
+
+        # If any slider is changed, set proportional marker to FALSE
+        for (cat in names(ccn)) {
+          observeEvent(input[[paste0(name, "_", cat, "_prob")]], {
+            proportional(FALSE)
+          })
+        }
 
         # Render error messages for each layer
         output[[paste0(name, "_error")]] <- renderUI({
@@ -438,6 +448,8 @@ sample_server <- function(id, dataset, presets) {
     return(list(strata = display_strata,
                 ratios = ratios,
                 sample_size = realized_sample_size,
-                sampling_type = sampling_type))
+                sampling_type = sampling_type,
+                proportional = proportional,
+                data_size = data_size))
   })
 }
