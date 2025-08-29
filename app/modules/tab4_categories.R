@@ -202,9 +202,15 @@ categories_server <- function(id, dataset, presets) {
         # Allow for removal of stratification layers
         observeEvent(server$remove, {
           if (server$remove) {
+            # Update stratification layers list
             sl <- strat_layers()
             sl[[layer_id]] <- NULL
             strat_layers(sl)
+            # Update strat layer data
+            ld <- layer_data()
+            ld[[server$name]] <- NULL
+            layer_data(ld)
+            # Update UI by removing corresponding tab
             removeTab(
               inputId = "strata_rename_input_ui",
               target = ns(paste0("panel_def_", layer_id))
