@@ -207,7 +207,7 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
           }
         } else {
           fluidRow(
-            column(6, bucket_list(
+            column(6, div(bucket_list(
               header = NULL,
               group_name = "bucket_list_group",
               class = c("default-sortable"),
@@ -216,8 +216,8 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
                 labels = vals,
                 input_id = ns("list_orignal_values")
               )
-            )),
-            column(6, lapply(1:num_categories(), function(n) {
+            ), style = "max-height: 50vh; overflow-y: auto;")),
+            column(6, div(lapply(1:num_categories(), function(n) {
               tagList(
                 textInput(ns(paste0("name_cat_", n)),
                           width = "100%",
@@ -234,7 +234,7 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
                                 input_id = ns(paste0("list_cat_", n)))
                 )
               )
-            }))
+            }), style = "max-height: 50vh; overflow-y: auto;"))
           )
         }
       } else {
