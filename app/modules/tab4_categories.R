@@ -128,7 +128,6 @@ categories_server <- function(id, dataset, presets) {
 
     # Fill strat_layers and UI with presets
     observeEvent(presets(), {
-      sls <- list()
       for (s in presets()$strat_layers) {
         # Create new UI for defining layer
         tab_num(tab_num() + 1)
@@ -159,10 +158,10 @@ categories_server <- function(id, dataset, presets) {
           preset_data_type = s$data_type,
           preset_categories = s$categories
         )
+        sls <- strat_layer_servers()
         sls[[layer_id]] <- server
+        strat_layer_servers(sls)
       }
-      strat_layers(presets()$strat_layers)
-      strat_layer_servers(c(strat_layer_servers(), sls))
     })
 
     observe({

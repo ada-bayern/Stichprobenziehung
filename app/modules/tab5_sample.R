@@ -34,6 +34,7 @@
 library(shiny)
 library(DT)
 library(rintrojs)
+library(R.utils)
 
 # TODO: Add summary of single categories?
 
@@ -79,24 +80,33 @@ sample_ui <- function(id) {
         h4("Zusammenfassung der Stichprobe"),
 
         div(id = ns("main1"),
+          numericInput(ns("strat_min_size"),
+                       "Mindestgröße der Schichten (Strata)",
+                       value = 1,
+                       min = 1,
+                       max = 100)
+        ), hr(),
+        div(id = ns("main2"),
           # Toggle between sampling strategies
           radioButtons(
             ns("sampling_type"),
             "Stichprobenstrategie",
-            choices = c("Garantierte Gesamtstichprobengröße" = "sample_size",
-                        "Garantierte Mindestgröße pro Kategorie" = "category_size",
-                        "Naives Verfahren (Keine Garantie)" = "naive"),
-            selected = "sample_size"
+            choices = c(
+              "Naives Verfahren (Keine Garantie; empfohlen bei vielen Strata (über 20))" = "naive",
+              "Garantierte Gesamtstichprobengröße" = "sample_size",
+              "Garantierte Mindestgröße pro Kategorie" = "category_size"
+            ),
+            selected = "naive"
           )
-        ),
+        ), hr(),
 
-        div(id = ns("main2"),
+        div(id = ns("main3"),
           # Display the size of the sample
           uiOutput(ns("realized_sample_size"))
-        ),
+        ), hr(),
 
         # Data table to show the summary of the sampled data
-        div(id = "main3",
+        div(id = "main4",
           DTOutput(ns("sample_summary")),
           style = "overflow-x: auto;"
         ),
@@ -114,7 +124,8 @@ sample_server <- function(id, dataset, presets) {
     steps <- reactive(data.frame(
       element = c(NA, paste0("#", ns("sidebar1")), paste0("#", ns("sidebar2")),
                   paste0("#", ns("sidebar3")), paste0("#", ns("main1")),
-                  paste0("#", ns("main2")), paste0("#", ns("main3")),
+                  paste0("#", ns("main2")), paste0("#", ns("main2")),
+                  paste0("#", ns("main3")), paste0("#", ns("main4")),
                   paste0("#", ns("sidebar2")), paste0("#", ns("sidebar2")),
                   NA, NA),
       intro = MANUAL$sample
@@ -338,7 +349,7 @@ sample_server <- function(id, dataset, presets) {
 
     # Perform sampling when the button is clicked
     observeEvent(input$sample_button, {
-      req(cat_counts(), dataset())
+      req(cat_counts(), dataset(), sampling_type(), sample_size() > 0)
 
       # Collect selected proportions
       ratios <- lapply(names(cat_counts()), function(name) {
@@ -363,7 +374,6 @@ sample_server <- function(id, dataset, presets) {
           }
           r
         })
-        print(ratios_n)
 
         # Standardize ratios to sum up to 1 in population mode
         sum_ratios <- sum(unlist(ratios_n))
@@ -378,26 +388,48 @@ sample_server <- function(id, dataset, presets) {
       # Store ratios for later use
       ratios(ratios)
 
+      # Add a timeout to prevent long-running operations
+      s_sizes <- withProgress(message = "Berechnung läuft...", value = 0, {
+        #withTimeout({
+          strata_sizes(sampling_type(), dataset(), ratios(),
+                       cat_counts(), input$strat_min_size,
+                       sample_size())
+        #}, timeout = 20, onTimeout = "warning")
+      })
+
       # Define strata sizes using imported function
-      strata(strata_sizes(dataset(), ratios(), cat_counts(), 3, sample_size()))
+      strata(s_sizes)
     })
 
     # Render the summary table
     observeEvent({
       strata()
-      sampling_type()
+      #sampling_type()
     }, {
       req(strata(), sampling_type())
       strt <- strata()
-      cols <- c("Stratum", "Size.Population", "Ratio.Population")
+      cols <- c("Stratum", "Size.Population", "Ratio.Population", "Size.Sample",
+                "Selection.Probability")
 
-      if (sampling_type() == "sample_size") {
-        cols <- c(cols, "Size.MD", "Selection.Probability.MD")
-      } else if (sampling_type() == "category_size") {
-        cols <- c(cols, "Size.LP", "Selection.Probability.LP")
-      } else {
-        cols <- c(cols, "Size.Naive", "Selection.Probability.Naive")
+      if (sum(strt["Size.Sample"]) == 0) {
+        showModal(modalDialog(
+          title = "Fehler bei der Stichprobenziehung",
+          "Das Verfahren hat das Zeitlimit überschritten. Bitte wählen Sie 
+          ein anderes Verfahren für eine Stichprobenziehung mit diesen
+          Parametern aus.",
+          easyClose = TRUE,
+          footer = NULL
+        ))
+        return(NULL)
       }
+
+      # if (sampling_type() == "sample_size") {
+      #   cols <- c(cols, "Size.MD", "Selection.Probability.MD")
+      # } else if (sampling_type() == "category_size") {
+      #   cols <- c(cols, "Size.LP", "Selection.Probability.LP")
+      # } else {
+      #   cols <- c(cols, "Size.Naive", "Selection.Probability.Naive")
+      # }
       strt <- strt[cols]
       colnames(strt) <- c("Stratum", "Größe in Grundgesamtheit",
                           "Anteil Grundgesamtheit", "Größe Stichprobe",
@@ -430,8 +462,7 @@ sample_server <- function(id, dataset, presets) {
       fluidRow(column(12,
         tags$b("Tatsächlich realisierte Stichprobengröße:"),
         br(),
-        span(realized_sample_size(), style = "font-weight: bold;"),
-        hr()
+        span(realized_sample_size(), style = "font-weight: bold;")
       ))
     })
 

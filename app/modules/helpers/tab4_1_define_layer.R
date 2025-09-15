@@ -108,7 +108,7 @@ define_layer_server <- function(id, dataset, preset_name = NULL,
     observeEvent(dataset(), {
       req(dataset())
       pr_name(preset_name)
-      pr_dt(preset_name)
+      pr_dt(preset_data_type)
       pr_cat(preset_categories)
     })
 

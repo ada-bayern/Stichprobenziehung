@@ -109,7 +109,8 @@ lp_guess <- function(num_strata, constr) {
                    const.mat = mat_constr,
                    const.dir = constr_dir,
                    const.rhs = constr_vec,
-                   all.int = TRUE)
+                   all.int = TRUE,
+                   timeout = 20)
   lp_problem$solution
 }
 
@@ -156,15 +157,16 @@ lp_md_guess <- function(num_cats, num_strata, strat_min, sample_size, constr) {
   constr_min_dist_rhs <- c(constr_aux_rhs, constr_aux_rhs,
                            constr_strat_max_rhs, constr_strat_min_rhs,
                            constr_sample_size_rhs)
-  print(constr_min_dist_lhs)
-  print(constr_min_dist_dir)
-  print(constr_min_dist_rhs)
+  # print(constr_min_dist_lhs)
+  # print(constr_min_dist_dir)
+  # print(constr_min_dist_rhs)
   lp_problem_min_dist <- lp(direction = "min",
                             objective.in = obj_fn_min_dist,
                             const.mat = constr_min_dist_lhs,
                             const.dir = constr_min_dist_dir,
                             const.rhs = constr_min_dist_rhs,
-                            all.int = TRUE)
+                            all.int = TRUE,
+                            timeout = 20)
   lp_problem_min_dist$solution[1:num_strata]
 }
 
@@ -194,7 +196,8 @@ get_strata_counts <- function(data, strata_combos) {
 #' @param strat_min Minimum data points required per stratum.
 #' @param sample_size Desired sample size for analysis.
 #' @return Dataframe with stratum sizes and sampling proportions.
-strata_sizes <- function(data, ratios, cat_counts, strat_min, sample_size) {
+strata_sizes <- function(sampling_type, data, ratios, cat_counts, strat_min,
+                         sample_size) {
   # Generate combinations of category names
   strata_combos <- expand.grid(lapply(cat_counts, names))
   strata_counts <- get_strata_counts(data, strata_combos)
@@ -212,60 +215,79 @@ strata_sizes <- function(data, ratios, cat_counts, strat_min, sample_size) {
   )
 
   # Apply different solving algorithms
-  strata_sizes_naive <- naive_guess(
-    ratios,
-    strata_combos,
-    strata_counts,
-    sample_size
-  )
+  strata_sizes <- if (sampling_type == "naive") {
+    print("Wende 'Naives Verfahren' an...")
+    naive_guess(
+      ratios,
+      strata_combos,
+      strata_counts,
+      sample_size
+    )
+  } else if(sampling_type == "category_size") {
+    print("Wende 'Garantierte Mindestgröße pro Kategorie' an...")
+    lp_guess(
+      num_strata,
+      constraints
+    )
+  } else {
+    print("Wende 'Garantierte Stichprobengröße' an...")
+    lp_md_guess(
+      num_cats,
+      num_strata,
+      strat_min,
+      sample_size,
+      constraints
+    )
+  }
 
-  # TODO: Find problem in LP guess method
-  strata_sizes_lp <- lp_guess(
-    num_strata,
-    constraints
-  )
 
-  print(num_cats)
-  print(num_strata)
-  print(strat_min)
-  print(sample_size)
-  print(constraints)
+  # print(num_cats)
+  # print(num_strata)
+  # print(strat_min)
+  # print(sample_size)
+  # print(constraints)
 
-  strata_sizes_md <- lp_md_guess(
-    num_cats,
-    num_strata,
-    strat_min,
-    sample_size,
-    constraints
-  )
+
 
   stratum_col <- apply(strata_combos, 1, function(x) {
     paste(names(x), x, sep = " = ", collapse = ", ")
   })
 
-  print(stratum_col)
-  print(strata_counts)
-  print(strata_sizes_naive)
-  print(strata_sizes_lp)
-  print(strata_sizes_md)
-
   out <- data.frame(
     Stratum = stratum_col,
     Size.Population = strata_counts,
-    Size.Naive = as.integer(strata_sizes_naive),
-    Size.LP = as.integer(strata_sizes_lp), # TODO: find problem
-    Size.MD = as.integer(strata_sizes_md)
+    Size.Sample = as.integer(strata_sizes)
   )
 
   # Making sure that ratios and probabilities are rendered as percentages
   out$Ratio.Population <- out$Size.Population / sum(out$Size.Population)
   out$Ratio.Population <- round(out$Ratio.Population, 3)
-  out$Selection.Probability.Naive <- out$Size.Naive / out$Size.Population
-  out$Selection.Probability.Naive <- round(out$Selection.Probability.Naive, 3)
-  out$Selection.Probability.LP <- out$Size.LP / out$Size.Population
-  out$Selection.Probability.LP <- round(out$Selection.Probability.LP, 3)
-  out$Selection.Probability.MD <- out$Size.MD / out$Size.Population
-  out$Selection.Probability.MD <- round(out$Selection.Probability.MD, 3)
+  out$Selection.Probability <- out$Size.Sample / out$Size.Population
+  out$Selection.Probability <- round(out$Selection.Probability, 3)
+
+  # print(stratum_col)
+  # print(strata_counts)
+  # print(strata_sizes_naive)
+  # print(strata_sizes_lp)
+  # print(strata_sizes_md)
+
+  # out <- data.frame(
+  #   Stratum = stratum_col,
+  #   Size.Population = strata_counts,
+  #   Size.Naive = as.integer(strata_sizes_naive),
+  #   Size.LP = as.integer(strata_sizes_lp), # TODO: find problem
+  #   Size.MD = as.integer(strata_sizes_md)
+  # )
+
+  # Making sure that ratios and probabilities are rendered as percentages
+  # out$Ratio.Population <- out$Size.Population / sum(out$Size.Population)
+  # out$Ratio.Population <- round(out$Ratio.Population, 3)
+  # out$Selection.Probability.Naive <- out$Size.Naive / out$Size.Population
+  # out$Selection.Probability.Naive <- round(out$Selection.Probability.Naive, 3)
+  # out$Selection.Probability.LP <- out$Size.LP / out$Size.Population
+  # out$Selection.Probability.LP <- round(out$Selection.Probability.LP, 3)
+  # out$Selection.Probability.MD <- out$Size.MD / out$Size.Population
+  # out$Selection.Probability.MD <- round(out$Selection.Probability.MD, 3)
 
   out
 }
