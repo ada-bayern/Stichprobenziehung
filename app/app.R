@@ -142,11 +142,12 @@ server <- function(input, output, session) {
       filters = ret_filter$filters(),
       strat_layers = ret_categories$strat_layers(),
       ratios = ret_sample$ratios(),
+      population_ratios = ret_sample$population_ratios(),
       strata = ret_sample$strata(),
       sample_size = ret_sample$sample_size(),
       sampling_type = ret_sample$sampling_type(),
-      data_size = ret_sample$data_size(),
-      proportional = ret_sample$proportional()
+      data_size = ret_sample$data_size()
+      #proportional = ret_sample$proportional()
     ))
   })
   # Observer for "Next" button clicks to navigate through tabs

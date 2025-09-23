@@ -127,7 +127,7 @@ sample_server <- function(id, dataset, presets) {
                   paste0("#", ns("main2")), paste0("#", ns("main2")),
                   paste0("#", ns("main3")), paste0("#", ns("main4")),
                   paste0("#", ns("sidebar2")), paste0("#", ns("sidebar2")),
-                  NA, NA),
+                  paste0("#", ns("sidebar2")), NA, NA),
       intro = MANUAL$sample
     ))
 
@@ -143,6 +143,7 @@ sample_server <- function(id, dataset, presets) {
     strata <- reactiveVal(NULL)
     display_strata <- reactiveVal(NULL)
     ratios <- reactiveVal(NULL)
+    population_ratios <- reactiveVal(NULL)
     sample_size <- reactiveVal(NULL)
     realized_sample_size <- reactiveVal(NULL)
     cat_counts <- reactiveVal(NULL)
@@ -231,7 +232,7 @@ sample_server <- function(id, dataset, presets) {
             # Get default value from presets (or use proportional if not appl.)
             val <- presets()$ratios[[name]][[cat]]
             if (is.null(val)) {
-              val <- round(ccn[[cat]] / data_size(), digits = 3)
+              val <- ccn[[cat]] / data_size()
             }
 
             sliderInput(
@@ -241,7 +242,7 @@ sample_server <- function(id, dataset, presets) {
               min = 0,
               max = 1,
               value = val,
-              step = 0.01
+              step = 0.001
             )
           })),
           uiOutput(ns(paste0(name, "_error")))
@@ -287,7 +288,7 @@ sample_server <- function(id, dataset, presets) {
             updateSliderInput(
               session,
               paste0(name, "_", cat, "_prob"),
-              value = round(prop_value, digits = 3)
+              value = prop_value
             )
           }
           # Set marker that sliders are proportional
@@ -351,6 +352,13 @@ sample_server <- function(id, dataset, presets) {
     observeEvent(input$sample_button, {
       req(cat_counts(), dataset(), sampling_type(), sample_size() > 0)
 
+      population_ratios <- lapply(names(cat_counts()), function(name) {
+        ccn <- cat_counts()[[name]]
+        lapply(names(ccn), function(cat) {
+          ccn[[cat]] / data_size()
+        })
+      })
+
       # Collect selected proportions
       ratios <- lapply(names(cat_counts()), function(name) {
         sel_kind <- input[[(paste0(name, "_sel_kind"))]]
@@ -384,9 +392,11 @@ sample_server <- function(id, dataset, presets) {
         ratios_n
       })
       names(ratios) <- names(cat_counts())
+      names(population_ratios) <- names(cat_counts())
 
       # Store ratios for later use
       ratios(ratios)
+      population_ratios(population_ratios)
 
       # Add a timeout to prevent long-running operations
       s_sizes <- withProgress(message = "Berechnung läuft...", value = 0, {
@@ -478,6 +488,7 @@ sample_server <- function(id, dataset, presets) {
     # Return information for use in the application, such as strata summary
     return(list(strata = display_strata,
                 ratios = ratios,
+                population_ratios = population_ratios,
                 sample_size = realized_sample_size,
                 sampling_type = sampling_type,
                 proportional = proportional,

@@ -21,11 +21,12 @@ params:
   filters: NA
   strat_layers: NA
   ratios: NA
+  population_ratios: NA
   strata: NA
   sample_size: NA
   sampling_type: NA
   data_size: NA
-  proportional: NA
+  #proportional: NA
 ---
 
 
@@ -112,26 +113,21 @@ tibble(df)
 ```
 ## Gewählte Stichprobenanteile pro Kategorie
 ```{r echo=FALSE}
-if (params$proportional) {
-  note <- "Die gewählten Stichprobenanteile sind proportional zu den Anteilen in der Grundgesamtheit."
-} else {
-  note <- "Die gewählten Stichprobenanteile sind NICHT proportional zu den Anteilen in der Grundgesamtheit."
-}
-tibble(Note = note)
-```
-```{r echo=FALSE}
 df <- data.frame(
   Merkmal = c(),
   Kategorie = c(),
-  Proportion = c()
+  Stichprobe = c(),
+  Grundgesamtheit = c()
 )
 
 for (name in names(params$ratios)) {
   df <- rbind(df, data.frame(
     Merkmal = name,
     Kategorie = unlist(names(params$ratios[[name]])),
-    Proportion = unlist(params$ratios[[name]])
-  ))
+    Proportion = unlist(params$ratios[[name]]),
+    Grundgesamtheit = unlist(params$population_ratios[[name]])
+  )) %>%
+    filter(`Merkmal` != "Gesamtheit")
 }
 
 tibble(df)

@@ -1,4 +1,4 @@
-# Bundling Shiny Apps in a Windows Executable
+# Bundling Shiny Apps as a Windows Executable
 
 How to create exe-files to distribute your Shiny app to lazy Windows users
 
@@ -31,7 +31,7 @@ Rscript.exe -e "shiny::runApp('%RAPPDIR%app', launch.browser = TRUE)"
 
 `~dp0` is a magic command for your current working directory. `RAPPDIR` stores this path with flipped separators for R.
 
-1.  Create `install.iss` for your app
+5.  Create `install.iss` for your app
 
 ```{pascal}
 
@@ -59,7 +59,7 @@ Name: "{commondesktop}\MyApp"; Filename: "{app}\run_app.bat"; Tasks: desktopicon
 Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"
 ```
 
-4.  Organize everything in this structure:
+6.  Organize everything in this structure:
 
 ```
 /
@@ -69,4 +69,4 @@ Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Ad
 └── run_app.bat     # this script is what the exe is going to do
 ```
 
-5.  Compile `install.iss` in *Inno Setup* (accessible via Window Menu)
+7.  Compile `install.iss` in *Inno Setup* (accessible via Window Menu)
