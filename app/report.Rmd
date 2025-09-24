@@ -74,10 +74,19 @@ for (filter in params$filters) {
       row <- paste(row, collapse = " & ")
       gsub("\U2208", "$\\\\in$", row)
     })
+    type <- "Oder-Klausel"
+  } else if (filter$type == "numeric") {
+    uv <- unlist(uv)
+    uv <- gsub(".*\U2208 ", "", uv)
+    type <- "Numerisch"
+  } else {
+    uv <- unlist(uv)
+    type <- "Kategorisch"
   }
 
   df <- rbind(df, data.frame(
     Merkmal = filter$col,
+    Typ = type,
     `Benutzte Werte` = uv
   ))
 }
@@ -126,8 +135,8 @@ for (name in names(params$ratios)) {
     Kategorie = unlist(names(params$ratios[[name]])),
     Proportion = unlist(params$ratios[[name]]),
     Grundgesamtheit = unlist(params$population_ratios[[name]])
-  )) %>%
-    filter(`Merkmal` != "Gesamtheit")
+  )) #%>%
+    #filter(`Merkmal` != "Gesamtheit")
 }
 
 tibble(df)

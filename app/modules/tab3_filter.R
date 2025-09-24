@@ -307,7 +307,7 @@ filter_server <- function(id, csv_data, presets) {
         all_vals(
           list(paste0(selected_col(), " \U2208 [",
                       paste(filter_vals(), collapse = ", "), "]"),
-               paste0(selected_col(), " \U00AC\U2208 [",
+               paste0(selected_col(), " \U2209 [",
                       paste(filter_vals(), collapse = ", "), "]"))
         )
       } else {
