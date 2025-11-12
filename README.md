@@ -5,11 +5,11 @@ Eine Webanwendung zur geschichteten Stichprobenziehung mit Werkzeugen zur Datene
 
 
 
-## Quickstart für Windows-Nutzer ohne globale R Installation
+<!-- ## Quickstart für Windows-Nutzer ohne globale R Installation
 
 `ADA_Stichproben_Setup.exe` ist ein ausführbares Installationsprogramm, das alle erforderlichen Schritte für die Installation der Anwendung automatisiert. R und alle benötigten Pakete sind darin enthalten. Nach der Installation können Sie die Anwendung direkt über das Startmenü starten.
 
----
+--- -->
 ---
 
 ## Anforderungen
