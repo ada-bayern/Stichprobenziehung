@@ -5,7 +5,7 @@ Eine Webanwendung zur geschichteten Stichprobenziehung mit Werkzeugen zur Datene
 
 
 
-## Quickstart für Windows-Nutzer ohne globaler R Installation
+## Quickstart für Windows-Nutzer ohne globale R Installation
 
 `ADA_Stichproben_Setup.exe` ist ein ausführbares Installationsprogramm, das alle erforderlichen Schritte für die Installation der Anwendung automatisiert. R und alle benötigten Pakete sind darin enthalten. Nach der Installation können Sie die Anwendung direkt über das Startmenü starten.
 
@@ -21,7 +21,7 @@ Eine Webanwendung zur geschichteten Stichprobenziehung mit Werkzeugen zur Datene
 ## Einrichtung / Installation
 
 Führen Sie das Installationsskript `install_deps.R` aus, um alle benötigten R-Pakete zu installieren. Das können Sie fogendermaßen tun:
-### Otion 1: RStudio
+### Option 1: RStudio
 1. Öffnen Sie `install_deps.R` in RStudio.
 2. Klicken Sie auf "Run" oder drücken Sie `Ctrl + Enter`, um das Skript auszuführen.
 
@@ -137,6 +137,7 @@ app/
 ### Unterstützung
 
 Für Fragen oder Probleme kontaktieren Sie bitte den Projektbetreuer.
+
 
 
 ---
